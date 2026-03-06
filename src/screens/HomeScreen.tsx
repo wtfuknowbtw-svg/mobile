@@ -1,0 +1,605 @@
+import React, { useState, useRef, useEffect } from 'react';
+import {
+    View,
+    Text,
+    TouchableOpacity,
+    ScrollView,
+    StatusBar,
+    Animated,
+    Dimensions,
+    Modal,
+    ActivityIndicator,
+    RefreshControl,
+    Alert,
+} from 'react-native';
+import { COLORS } from '../constants';
+import { useAppStore } from '../store/useAppStore';
+import { useQuery } from '@tanstack/react-query';
+import { getTransactions, deleteTransaction } from '../api/transactions';
+import type { Transaction } from '../types';
+
+const { width } = Dimensions.get('window');
+
+interface HomeScreenProps {
+    navigation: any;
+}
+
+export default function HomeScreen({ navigation }: HomeScreenProps) {
+    const { dashboardStats, computeStats, businessId } = useAppStore();
+    const [showAddSheet, setShowAddSheet] = useState(false);
+    const [selectedTxn, setSelectedTxn] = useState<Transaction | null>(null);
+    const [showTxnDetails, setShowTxnDetails] = useState(false);
+    const slideAnim = useRef(new Animated.Value(300)).current;
+
+    const { data: txnsResponse, isLoading, refetch, isRefetching } = useQuery({
+        queryKey: ['transactions', businessId],
+        queryFn: () => getTransactions(businessId),
+        enabled: !!businessId,
+    });
+
+    const recentTransactions: Transaction[] = txnsResponse?.data || [];
+
+    // Compute dashboard stats whenever transactions change
+    useEffect(() => {
+        if (recentTransactions.length > 0) {
+            computeStats(recentTransactions);
+        }
+    }, [recentTransactions]);
+
+    const openSheet = () => {
+        setShowAddSheet(true);
+        Animated.spring(slideAnim, {
+            toValue: 0,
+            useNativeDriver: true,
+            tension: 65,
+            friction: 11,
+        }).start();
+    };
+
+    const closeSheet = () => {
+        Animated.timing(slideAnim, {
+            toValue: 300,
+            duration: 200,
+            useNativeDriver: true,
+        }).start(() => setShowAddSheet(false));
+    };
+
+    const handleDelete = async () => {
+        if (!selectedTxn) return;
+
+        try {
+            const { error } = await deleteTransaction(selectedTxn.id);
+            if (error) throw new Error(error);
+
+            setShowTxnDetails(false);
+            refetch(); // Refresh the list
+        } catch (err) {
+            console.error('Delete error:', err);
+            alert('Failed to delete transaction. Please try again.');
+        }
+    };
+
+    const getTypeLabel = (type: string) => {
+        switch (type) {
+            case 'credit':
+                return { label: 'UDHAR', color: COLORS.danger, bg: COLORS.dangerLight };
+            case 'cash':
+                return { label: 'SALE', color: COLORS.success, bg: COLORS.successLight };
+            case 'expense':
+                return { label: 'PURCHASE', color: COLORS.purchase, bg: COLORS.purchaseLight };
+            default:
+                return { label: 'OTHER', color: COLORS.textMuted, bg: COLORS.background };
+        }
+    };
+
+    const formatCurrency = (amount: number) => `₹${amount.toLocaleString('en-IN')}`;
+
+    const formatDate = (dateStr: string) => {
+        const txnDate = new Date(dateStr);
+        const today = new Date();
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+
+        if (txnDate.toDateString() === today.toDateString()) return 'Today';
+        if (txnDate.toDateString() === yesterday.toDateString()) return 'Yesterday';
+        return txnDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+    };
+
+    return (
+        <View style={{ flex: 1, backgroundColor: COLORS.background }}>
+            <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
+
+            {/* Header */}
+            <View
+                style={{
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    paddingTop: 52,
+                    paddingHorizontal: 20,
+                    paddingBottom: 16,
+                    backgroundColor: COLORS.background,
+                }}
+            >
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Text style={{ fontSize: 13, marginRight: 8 }}>📒</Text>
+                    <Text style={{ fontSize: 22, fontWeight: '800', color: COLORS.text }}>
+                        <Text style={{ color: COLORS.success }}>Khata</Text>
+                        <Text style={{ color: COLORS.orange }}>AI</Text>
+                    </Text>
+                </View>
+                <View style={{ flexDirection: 'row', gap: 12 }}>
+                    <TouchableOpacity
+                        style={{
+                            width: 36,
+                            height: 36,
+                            borderRadius: 18,
+                            backgroundColor: COLORS.orangeLight,
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                        }}
+                    >
+                        <Text style={{ fontSize: 16 }}>🔔</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        onPress={() => navigation.navigate('Settings')}
+                        style={{
+                            width: 36,
+                            height: 36,
+                            borderRadius: 18,
+                            backgroundColor: COLORS.primaryLight,
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                        }}
+                    >
+                        <Text style={{ fontSize: 16 }}>👤</Text>
+                    </TouchableOpacity>
+                </View>
+            </View>
+
+            {/* Stats Row */}
+            <View
+                style={{
+                    flexDirection: 'row',
+                    marginHorizontal: 20,
+                    borderRadius: 12,
+                    overflow: 'hidden',
+                    marginBottom: 20,
+                }}
+            >
+                <View
+                    style={{
+                        flex: 1,
+                        backgroundColor: COLORS.success,
+                        paddingVertical: 14,
+                        alignItems: 'center',
+                    }}
+                >
+                    <Text style={{ color: '#A7F3D0', fontSize: 11, fontWeight: '500' }}>
+                        Today's Sales
+                    </Text>
+                    <Text
+                        style={{
+                            color: COLORS.white,
+                            fontSize: 18,
+                            fontWeight: '800',
+                            marginTop: 2,
+                        }}
+                    >
+                        {formatCurrency(dashboardStats.todaySales)}
+                    </Text>
+                </View>
+                <View
+                    style={{
+                        flex: 1,
+                        backgroundColor: COLORS.danger,
+                        paddingVertical: 14,
+                        alignItems: 'center',
+                    }}
+                >
+                    <Text style={{ color: '#FECACA', fontSize: 11, fontWeight: '500' }}>
+                        Total Udhar
+                    </Text>
+                    <Text
+                        style={{
+                            color: COLORS.white,
+                            fontSize: 18,
+                            fontWeight: '800',
+                            marginTop: 2,
+                        }}
+                    >
+                        {formatCurrency(dashboardStats.totalUdhar)}
+                    </Text>
+                </View>
+                <View
+                    style={{
+                        flex: 1,
+                        backgroundColor: COLORS.orange,
+                        paddingVertical: 14,
+                        alignItems: 'center',
+                    }}
+                >
+                    <Text style={{ color: '#FEF3C7', fontSize: 11, fontWeight: '500' }}>
+                        This Week
+                    </Text>
+                    <Text
+                        style={{
+                            color: COLORS.white,
+                            fontSize: 18,
+                            fontWeight: '800',
+                            marginTop: 2,
+                        }}
+                    >
+                        {formatCurrency(dashboardStats.thisWeek)}
+                    </Text>
+                </View>
+            </View>
+
+            {/* Recent Transactions */}
+            <View style={{ paddingHorizontal: 20, marginBottom: 8 }}>
+                <Text
+                    style={{
+                        fontSize: 12,
+                        fontWeight: '700',
+                        color: COLORS.textMuted,
+                        letterSpacing: 1,
+                    }}
+                >
+                    RECENT TRANSACTIONS
+                </Text>
+            </View>
+
+            <ScrollView
+                style={{ flex: 1, paddingHorizontal: 20 }}
+                showsVerticalScrollIndicator={false}
+                refreshControl={
+                    <RefreshControl refreshing={isRefetching} onRefresh={refetch} />
+                }
+            >
+                {isLoading && (
+                    <View style={{ paddingVertical: 40, alignItems: 'center' }}>
+                        <ActivityIndicator size="large" color={COLORS.success} />
+                        <Text style={{ color: COLORS.textMuted, marginTop: 8 }}>Loading...</Text>
+                    </View>
+                )}
+
+                {!isLoading && recentTransactions.length === 0 && (
+                    <View style={{ paddingVertical: 60, alignItems: 'center' }}>
+                        <Text style={{ fontSize: 48, marginBottom: 16 }}>📒</Text>
+                        <Text style={{ fontSize: 16, fontWeight: '600', color: COLORS.text }}>
+                            No transactions yet
+                        </Text>
+                        <Text style={{ fontSize: 13, color: COLORS.textMuted, marginTop: 4, textAlign: 'center' }}>
+                            Tap the + button to add your first{'\n'}transaction via voice, camera, or manual entry
+                        </Text>
+                    </View>
+                )}
+
+                {recentTransactions.map((txn) => {
+                    const typeInfo = getTypeLabel(txn.type);
+                    return (
+                        <TouchableOpacity
+                            key={txn.id}
+                            activeOpacity={0.7}
+                            onPress={() => {
+                                setSelectedTxn(txn);
+                                setShowTxnDetails(true);
+                            }}
+                            style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                paddingVertical: 14,
+                                borderBottomWidth: 1,
+                                borderBottomColor: COLORS.border,
+                            }}
+                        >
+                            <View style={{ flex: 1 }}>
+                                <Text
+                                    style={{
+                                        fontSize: 16,
+                                        fontWeight: '600',
+                                        color: COLORS.text,
+                                    }}
+                                >
+                                    {txn.customerName || 'Unknown'}
+                                </Text>
+                                <Text
+                                    style={{
+                                        fontSize: 13,
+                                        color: COLORS.textMuted,
+                                        marginTop: 2,
+                                    }}
+                                >
+                                    {txn.itemName || 'Items'} · {formatDate(txn.date)}
+                                </Text>
+                            </View>
+                            <View style={{ alignItems: 'flex-end' }}>
+                                <Text
+                                    style={{
+                                        fontSize: 16,
+                                        fontWeight: '700',
+                                        color: COLORS.text,
+                                    }}
+                                >
+                                    {formatCurrency(txn.price)}
+                                </Text>
+                                <View
+                                    style={{
+                                        backgroundColor: typeInfo.bg,
+                                        paddingHorizontal: 8,
+                                        paddingVertical: 2,
+                                        borderRadius: 4,
+                                        marginTop: 4,
+                                    }}
+                                >
+                                    <Text
+                                        style={{
+                                            fontSize: 10,
+                                            fontWeight: '700',
+                                            color: typeInfo.color,
+                                        }}
+                                    >
+                                        {typeInfo.label}
+                                    </Text>
+                                </View>
+                            </View>
+                        </TouchableOpacity>
+                    );
+                })}
+                <View style={{ height: 80 }} />
+            </ScrollView>
+
+            {/* FAB */}
+            <TouchableOpacity
+                onPress={openSheet}
+                activeOpacity={0.85}
+                style={{
+                    position: 'absolute',
+                    bottom: 24,
+                    right: 24,
+                    width: 56,
+                    height: 56,
+                    borderRadius: 16,
+                    backgroundColor: COLORS.success,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    shadowColor: COLORS.success,
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.4,
+                    shadowRadius: 8,
+                    elevation: 8,
+                }}
+            >
+                <Text style={{ fontSize: 28, color: COLORS.white, fontWeight: '300' }}>
+                    +
+                </Text>
+            </TouchableOpacity>
+
+            {/* Add Transaction Bottom Sheet */}
+            <Modal
+                visible={showAddSheet}
+                transparent
+                animationType="none"
+                onRequestClose={closeSheet}
+            >
+                <TouchableOpacity
+                    activeOpacity={1}
+                    onPress={closeSheet}
+                    style={{
+                        flex: 1,
+                        backgroundColor: 'rgba(0,0,0,0.4)',
+                        justifyContent: 'flex-end',
+                    }}
+                >
+                    <Animated.View
+                        style={{
+                            backgroundColor: COLORS.card,
+                            borderTopLeftRadius: 24,
+                            borderTopRightRadius: 24,
+                            paddingTop: 20,
+                            paddingBottom: 40,
+                            paddingHorizontal: 24,
+                            transform: [{ translateY: slideAnim }],
+                        }}
+                    >
+                        {/* Handle */}
+                        <View
+                            style={{
+                                width: 40,
+                                height: 4,
+                                backgroundColor: COLORS.border,
+                                borderRadius: 2,
+                                alignSelf: 'center',
+                                marginBottom: 20,
+                            }}
+                        />
+                        <Text
+                            style={{
+                                fontSize: 18,
+                                fontWeight: '700',
+                                color: COLORS.text,
+                                textAlign: 'center',
+                                marginBottom: 24,
+                            }}
+                        >
+                            Add Transaction
+                        </Text>
+
+                        <View
+                            style={{
+                                flexDirection: 'row',
+                                justifyContent: 'space-around',
+                            }}
+                        >
+                            {[
+                                { icon: '📸', label: 'Photo', color: COLORS.success, screen: 'CameraScan' },
+                                { icon: '🎤', label: 'Voice', color: COLORS.danger, screen: 'VoiceInput' },
+                                { icon: '💬', label: 'WhatsApp', color: COLORS.success, screen: null },
+                                { icon: '✏️', label: 'Manual', color: COLORS.orange, screen: 'ManualEntry' },
+                            ].map((item) => (
+                                <TouchableOpacity
+                                    key={item.label}
+                                    activeOpacity={0.7}
+                                    onPress={() => {
+                                        closeSheet();
+                                        if (item.screen) {
+                                            setTimeout(() => navigation.navigate(item.screen), 300);
+                                        }
+                                    }}
+                                    style={{ alignItems: 'center' }}
+                                >
+                                    <View
+                                        style={{
+                                            width: 60,
+                                            height: 60,
+                                            borderRadius: 16,
+                                            backgroundColor: COLORS.successLight,
+                                            justifyContent: 'center',
+                                            alignItems: 'center',
+                                            marginBottom: 8,
+                                        }}
+                                    >
+                                        <Text style={{ fontSize: 28 }}>{item.icon}</Text>
+                                    </View>
+                                    <Text
+                                        style={{
+                                            fontSize: 13,
+                                            fontWeight: '600',
+                                            color: COLORS.text,
+                                        }}
+                                    >
+                                        {item.label}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                    </Animated.View>
+                </TouchableOpacity>
+            </Modal>
+            {/* Transaction Details Modal */}
+            <Modal
+                visible={showTxnDetails}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setShowTxnDetails(false)}
+            >
+                <TouchableOpacity
+                    activeOpacity={1}
+                    onPress={() => setShowTxnDetails(false)}
+                    style={{
+                        flex: 1,
+                        backgroundColor: 'rgba(0,0,0,0.5)',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        padding: 20,
+                    }}
+                >
+                    <View
+                        style={{
+                            backgroundColor: COLORS.card,
+                            borderRadius: 24,
+                            width: '100%',
+                            padding: 24,
+                            shadowColor: '#000',
+                            shadowOffset: { width: 0, height: 10 },
+                            shadowOpacity: 0.1,
+                            shadowRadius: 20,
+                            elevation: 10,
+                        }}
+                    >
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 }}>
+                            <Text style={{ fontSize: 20, fontWeight: '800', color: COLORS.text }}>
+                                Transaction Details
+                            </Text>
+                            <TouchableOpacity onPress={() => setShowTxnDetails(false)}>
+                                <Text style={{ fontSize: 20, color: COLORS.textMuted }}>✕</Text>
+                            </TouchableOpacity>
+                        </View>
+
+                        {selectedTxn && (
+                            <View>
+                                <View style={{ marginBottom: 16 }}>
+                                    <Text style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 4 }}>CUSTOMER</Text>
+                                    <Text style={{ fontSize: 18, fontWeight: '600', color: COLORS.text }}>{selectedTxn.customerName}</Text>
+                                </View>
+
+                                <View style={{ flexDirection: 'row', gap: 24, marginBottom: 16 }}>
+                                    <View style={{ flex: 1 }}>
+                                        <Text style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 4 }}>AMOUNT</Text>
+                                        <Text style={{ fontSize: 18, fontWeight: '700', color: selectedTxn.type === 'credit' ? COLORS.danger : COLORS.success }}>
+                                            {formatCurrency(selectedTxn.price)}
+                                        </Text>
+                                    </View>
+                                    <View style={{ flex: 1 }}>
+                                        <Text style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 4 }}>TYPE</Text>
+                                        <View style={{
+                                            backgroundColor: getTypeLabel(selectedTxn.type).bg,
+                                            paddingHorizontal: 8,
+                                            paddingVertical: 4,
+                                            borderRadius: 6,
+                                            alignSelf: 'flex-start'
+                                        }}>
+                                            <Text style={{ color: getTypeLabel(selectedTxn.type).color, fontWeight: '700', fontSize: 12 }}>
+                                                {getTypeLabel(selectedTxn.type).label}
+                                            </Text>
+                                        </View>
+                                    </View>
+                                </View>
+
+                                <View style={{ marginBottom: 24 }}>
+                                    <Text style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 4 }}>ITEM / DESCRIPTION</Text>
+                                    <Text style={{ fontSize: 16, color: COLORS.text }}>{selectedTxn.itemName || 'No description'}</Text>
+                                </View>
+
+                                <View style={{ flexDirection: 'row', gap: 12 }}>
+                                    <TouchableOpacity
+                                        style={{
+                                            flex: 1,
+                                            height: 48,
+                                            borderRadius: 12,
+                                            backgroundColor: COLORS.background,
+                                            borderWidth: 1,
+                                            borderColor: COLORS.border,
+                                            justifyContent: 'center',
+                                            alignItems: 'center',
+                                        }}
+                                        onPress={() => {
+                                            setShowTxnDetails(false);
+                                            alert('Edit feature coming soon! You will be able to modify item name, price, and type.');
+                                        }}
+                                    >
+                                        <Text style={{ fontWeight: '600', color: COLORS.text }}>Edit</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        style={{
+                                            flex: 1,
+                                            height: 48,
+                                            borderRadius: 12,
+                                            backgroundColor: '#FEF2F2',
+                                            borderWidth: 1,
+                                            borderColor: '#FECACA',
+                                            justifyContent: 'center',
+                                            alignItems: 'center',
+                                        }}
+                                        onPress={() => {
+                                            Alert.alert(
+                                                'Delete Transaction',
+                                                'Are you sure you want to delete this transaction? This action cannot be undone.',
+                                                [
+                                                    { text: 'Cancel', style: 'cancel' },
+                                                    { text: 'Delete', style: 'destructive', onPress: handleDelete },
+                                                ]
+                                            );
+                                        }}
+                                    >
+                                        <Text style={{ fontWeight: '600', color: COLORS.danger }}>Delete</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+                        )}
+                    </View>
+                </TouchableOpacity>
+            </Modal>
+        </View>
+    );
+}

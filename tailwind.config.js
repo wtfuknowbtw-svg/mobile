@@ -1,0 +1,62 @@
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  content: [
+    "./App.{js,jsx,ts,tsx}",
+    "./src/**/*.{js,jsx,ts,tsx}",
+  ],
+  presets: [require("nativewind/preset")],
+  theme: {
+    extend: {
+      colors: {
+        primary: {
+          50: '#EBF0FB',
+          100: '#D6E1F7',
+          200: '#ADC3EF',
+          300: '#85A5E7',
+          400: '#5C87DF',
+          500: '#1A56DB',
+          600: '#1545AF',
+          700: '#103483',
+          800: '#0A2358',
+          900: '#05112C',
+        },
+        success: {
+          50: '#ECFDF5',
+          100: '#D1FAE5',
+          200: '#A7F3D0',
+          300: '#6EE7B7',
+          400: '#34D399',
+          500: '#057A55',
+          600: '#046C4E',
+          700: '#03543F',
+          800: '#014737',
+          900: '#064E3B',
+        },
+        danger: {
+          50: '#FEF2F2',
+          100: '#FEE2E2',
+          200: '#FECACA',
+          300: '#FCA5A5',
+          400: '#F87171',
+          500: '#E02424',
+          600: '#DC2626',
+          700: '#B91C1C',
+          800: '#991B1B',
+          900: '#7F1D1D',
+        },
+        bg: '#F9FAFB',
+        textDark: '#111928',
+        textMuted: '#6B7280',
+        border: '#E5E7EB',
+        cardBg: '#FFFFFF',
+        udhar: '#E02424',
+        cash: '#057A55',
+        purchase: '#1A56DB',
+      },
+      fontFamily: {
+        sans: ['Inter', 'NotoSans', 'System'],
+      },
+    },
+  },
+  plugins: [],
+};

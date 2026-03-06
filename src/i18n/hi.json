@@ -1,0 +1,111 @@
+{
+    "splash": {
+        "title": "KhataAI",
+        "subtitle": "Paper se Digital — Bina typing ke\nPaper to Digital — No Typing",
+        "cta": "शुरू करें →",
+        "tagline": "63M+ businesses पहले से paper use करते हैं। अब बदलाव का समय!"
+    },
+    "language": {
+        "title": "Choose Language / भाषा चुनें"
+    },
+    "login": {
+        "title": "अपना नंबर डालें",
+        "subtitle": "हम OTP भेजेंगे verify करने के लिए",
+        "phonePlaceholder": "98765 43210",
+        "sendOtp": "OTP भेजें →",
+        "otpSent": "OTP भेजा गया",
+        "verify": "Verify & Login →",
+        "resend": "OTP फिर से भेजें"
+    },
+    "home": {
+        "todaySales": "आज की बिक्री",
+        "totalUdhar": "कुल उधार",
+        "thisWeek": "इस हफ्ते",
+        "recentTransactions": "हाल के लेन-देन",
+        "addTransaction": "लेन-देन जोड़ें",
+        "photo": "फोटो",
+        "voice": "आवाज़",
+        "whatsapp": "WhatsApp",
+        "manual": "मैनुअल"
+    },
+    "customers": {
+        "title": "ग्राहक",
+        "search": "ग्राहक खोजें...",
+        "udhar": "उधार (क्रेडिट)",
+        "all": "सभी ग्राहक",
+        "owed": "बकाया",
+        "supplier": "सप्लायर"
+    },
+    "reports": {
+        "title": "रिपोर्ट्स",
+        "week": "हफ्ता",
+        "month": "महीना",
+        "year": "साल",
+        "salesThisWeek": "इस हफ्ते की बिक्री",
+        "totalSales": "कुल बिक्री",
+        "outstanding": "बकाया",
+        "topItems": "सबसे ज़्यादा बिकने वाले",
+        "exportExcel": "Excel में डाउनलोड करें"
+    },
+    "voice": {
+        "title": "आवाज़ से एंट्री",
+        "hint": "Hindi, Marathi, या English में बोलें",
+        "recording": "रिकॉर्डिंग...",
+        "transcript": "लाइव ट्रांसक्रिप्ट",
+        "parsed": "पार्स किया गया",
+        "customer": "ग्राहक",
+        "amount": "राशि",
+        "item": "सामान",
+        "reRecord": "फिर से रिकॉर्ड",
+        "confirmSave": "पुष्टि करें और सहेजें"
+    },
+    "camera": {
+        "scanTitle": "पेपर / रजिस्टर स्कैन करें",
+        "hint": "पेपर रजिस्टर की तरफ़ पॉइंट करें",
+        "hintSub": "text readable हो - ये ज़रूरी है",
+        "gallery": "गैलरी",
+        "flash": "फ्लैश",
+        "tipHold": "टिप: स्थिर रखें",
+        "autoCrop": "ऑटो-क्रॉप"
+    },
+    "review": {
+        "title": "निकाला गया डेटा देखें",
+        "rawOcr": "OCR टेक्स्ट",
+        "aiParsed": "AI द्वारा पार्स किया गया",
+        "extractedBy": "AI द्वारा निकाला गया, एडिट करने के लिए टैप करें",
+        "customer": "ग्राहक",
+        "date": "तारीख",
+        "type": "प्रकार",
+        "items": "सामान",
+        "total": "कुल",
+        "edit": "एडिट करें",
+        "confirmSave": "पुष्टि करें और सहेजें"
+    },
+    "settings": {
+        "title": "सेटिंग्स",
+        "businessProfile": "व्यापार प्रोफ़ाइल",
+        "language": "भाषा",
+        "subscription": "सब्सक्रिप्शन और बिलिंग",
+        "help": "मदद / सहायता",
+        "logout": "लॉग आउट"
+    },
+    "tabs": {
+        "home": "होम",
+        "customers": "ग्राहक",
+        "reports": "रिपोर्ट",
+        "settings": "सेटिंग्स"
+    },
+    "common": {
+        "continue": "जारी रखें →",
+        "cancel": "रद्द करें",
+        "save": "सहेजें",
+        "delete": "हटाएं",
+        "edit": "एडिट करें",
+        "close": "बंद करें",
+        "sale": "बिक्री",
+        "udhar": "उधार",
+        "purchase": "खरीद",
+        "today": "आज",
+        "yesterday": "कल"
+    }
+}

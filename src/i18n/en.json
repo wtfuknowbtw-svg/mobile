@@ -1,0 +1,111 @@
+{
+  "splash": {
+    "title": "KhataAI",
+    "subtitle": "Paper se Digital — Bina typing ke\nPaper to Digital — No Typing",
+    "cta": "Get Started →",
+    "tagline": "63M+ businesses already trust paper. Let's change that!"
+  },
+  "language": {
+    "title": "Choose Language / भाषा चुनें"
+  },
+  "login": {
+    "title": "Enter your number",
+    "subtitle": "We'll send an OTP to verify",
+    "phonePlaceholder": "98765 43210",
+    "sendOtp": "Send OTP →",
+    "otpSent": "Enter OTP sent to",
+    "verify": "Verify & Login →",
+    "resend": "Resend OTP in"
+  },
+  "home": {
+    "todaySales": "Today's Sales",
+    "totalUdhar": "Total Udhar",
+    "thisWeek": "This Week",
+    "recentTransactions": "RECENT TRANSACTIONS",
+    "addTransaction": "Add Transaction",
+    "photo": "Photo",
+    "voice": "Voice",
+    "whatsapp": "WhatsApp",
+    "manual": "Manual"
+  },
+  "customers": {
+    "title": "Customers",
+    "search": "Search customer...",
+    "udhar": "UDHAR (CREDIT)",
+    "all": "ALL CUSTOMERS",
+    "owed": "owed",
+    "supplier": "SUPPLIER"
+  },
+  "reports": {
+    "title": "Reports",
+    "week": "Week",
+    "month": "Month",
+    "year": "Year",
+    "salesThisWeek": "SALES THIS WEEK",
+    "totalSales": "Total Sales",
+    "outstanding": "Outstanding",
+    "topItems": "TOP ITEMS SOLD",
+    "exportExcel": "Report to Excel"
+  },
+  "voice": {
+    "title": "Voice Entry",
+    "hint": "Speak in Hindi, Marathi, or English",
+    "recording": "Recording...",
+    "transcript": "LIVE TRANSCRIPT",
+    "parsed": "PARSED",
+    "customer": "Customer",
+    "amount": "Amount",
+    "item": "Item",
+    "reRecord": "Re-record",
+    "confirmSave": "Confirm & Save"
+  },
+  "camera": {
+    "scanTitle": "Scan Paper / Register",
+    "hint": "Point at paper register",
+    "hintSub": "Make sure text is readable",
+    "gallery": "Gallery",
+    "flash": "Flash",
+    "tipHold": "Tip: Hold steady",
+    "autoCrop": "Auto-crop"
+  },
+  "review": {
+    "title": "Review Extracted Data",
+    "rawOcr": "RAW OCR TEXT",
+    "aiParsed": "AI PARSED DATA",
+    "extractedBy": "EXTRACTED BY AI, TAP TO EDIT",
+    "customer": "Customer",
+    "date": "Date",
+    "type": "Type",
+    "items": "Items",
+    "total": "Total",
+    "edit": "Edit",
+    "confirmSave": "Confirm & Save"
+  },
+  "settings": {
+    "title": "Settings",
+    "businessProfile": "Business Profile",
+    "language": "Language",
+    "subscription": "Subscription & Billing",
+    "help": "Help / Support",
+    "logout": "Logout"
+  },
+  "tabs": {
+    "home": "Home",
+    "customers": "Customers",
+    "reports": "Reports",
+    "settings": "Settings"
+  },
+  "common": {
+    "continue": "Continue →",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close",
+    "sale": "SALE",
+    "udhar": "UDHAR",
+    "purchase": "PURCHASE",
+    "today": "Today",
+    "yesterday": "Yesterday"
+  }
+}

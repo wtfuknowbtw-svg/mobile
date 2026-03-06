@@ -1,0 +1,380 @@
+import React, { useState } from 'react';
+import {
+    View,
+    Text,
+    TouchableOpacity,
+    ScrollView,
+    TextInput,
+    StatusBar,
+    ActivityIndicator,
+    RefreshControl,
+    Alert,
+    Modal,
+} from 'react-native';
+import { COLORS } from '../constants';
+import { useAppStore } from '../store/useAppStore';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { getCustomers, createCustomer } from '../api/customers';
+import type { Customer } from '../types';
+
+interface CustomersScreenProps {
+    navigation: any;
+}
+
+export default function CustomersScreen({ navigation }: CustomersScreenProps) {
+    const { businessId } = useAppStore();
+    const [search, setSearch] = useState('');
+    const [showAddModal, setShowAddModal] = useState(false);
+    const [newName, setNewName] = useState('');
+    const [newPhone, setNewPhone] = useState('');
+    const queryClient = useQueryClient();
+
+    const { data, isLoading, refetch, isRefetching } = useQuery({
+        queryKey: ['customers', businessId],
+        queryFn: () => getCustomers(businessId),
+        enabled: !!businessId,
+    });
+
+    const customers: Customer[] = data?.data || [];
+
+    const addMutation = useMutation({
+        mutationFn: createCustomer,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['customers'] });
+            setShowAddModal(false);
+            setNewName('');
+            setNewPhone('');
+        },
+        onError: () => Alert.alert('Error', 'Failed to add customer.'),
+    });
+
+    const filtered = customers.filter((c) =>
+        c.name.toLowerCase().includes(search.toLowerCase())
+    );
+
+    const udharCustomers = filtered.filter((c) => c.totalUdhar > 0);
+    const regularCustomers = filtered.filter((c) => c.totalUdhar === 0);
+
+    const formatCurrency = (n: number) => `₹${n.toLocaleString('en-IN')}`;
+
+    const getInitialColor = (name: string) => {
+        const colors = [COLORS.danger, COLORS.primary, COLORS.success, COLORS.orange];
+        return colors[name.charCodeAt(0) % colors.length];
+    };
+
+    const handleAddCustomer = () => {
+        if (!newName.trim()) return;
+        addMutation.mutate({
+            name: newName.trim(),
+            phone: newPhone.trim() || undefined,
+            businessId
+        });
+    };
+
+    const renderCustomerRow = (customer: Customer, showUdhar: boolean) => (
+        <TouchableOpacity
+            key={customer.id}
+            activeOpacity={0.7}
+            onPress={() => navigation.navigate('CustomerDetail', { customerId: customer.id, customerName: customer.name })}
+            style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                paddingVertical: 12,
+                borderBottomWidth: 1,
+                borderBottomColor: COLORS.border,
+            }}
+        >
+            {/* Avatar */}
+            <View
+                style={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: 22,
+                    backgroundColor: getInitialColor(customer.name),
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    marginRight: 14,
+                }}
+            >
+                <Text style={{ color: COLORS.white, fontSize: 18, fontWeight: '700' }}>
+                    {customer.name.charAt(0)}
+                </Text>
+            </View>
+
+            {/* Info */}
+            <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 15, fontWeight: '600', color: COLORS.text }}>
+                    {customer.name}
+                </Text>
+                <Text style={{ fontSize: 12, color: COLORS.textMuted, marginTop: 2 }}>
+                    {customer.phone || 'No phone'}
+                </Text>
+            </View>
+
+            {/* Amount */}
+            {showUdhar ? (
+                <View style={{ alignItems: 'flex-end' }}>
+                    <Text style={{ fontSize: 15, fontWeight: '700', color: COLORS.danger }}>
+                        +{formatCurrency(customer.totalUdhar)}
+                    </Text>
+                    <Text style={{ fontSize: 11, color: COLORS.danger, marginTop: 2 }}>
+                        owed
+                    </Text>
+                </View>
+            ) : (
+                <View
+                    style={{
+                        paddingHorizontal: 10,
+                        paddingVertical: 4,
+                        borderRadius: 6,
+                        backgroundColor: COLORS.successLight,
+                    }}
+                >
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: COLORS.success }}>
+                        CLEAR
+                    </Text>
+                </View>
+            )}
+        </TouchableOpacity>
+    );
+
+    return (
+        <View style={{ flex: 1, backgroundColor: COLORS.background }}>
+            <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
+
+            {/* Header */}
+            <View
+                style={{
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    paddingTop: 52,
+                    paddingHorizontal: 20,
+                    paddingBottom: 12,
+                }}
+            >
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Text style={{ fontSize: 16, marginRight: 8 }}>👥</Text>
+                    <Text style={{ fontSize: 22, fontWeight: '800', color: COLORS.text }}>
+                        Customers
+                    </Text>
+                </View>
+                <TouchableOpacity
+                    onPress={() => setShowAddModal(true)}
+                    style={{
+                        width: 32,
+                        height: 32,
+                        borderRadius: 8,
+                        borderWidth: 1,
+                        borderColor: COLORS.border,
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        backgroundColor: COLORS.card,
+                    }}
+                >
+                    <Text style={{ fontSize: 18, color: COLORS.text }}>+</Text>
+                </TouchableOpacity>
+            </View>
+
+            {/* Search */}
+            <View style={{ paddingHorizontal: 20, marginBottom: 16 }}>
+                <View
+                    style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        backgroundColor: COLORS.card,
+                        borderRadius: 10,
+                        borderWidth: 1,
+                        borderColor: COLORS.border,
+                        paddingHorizontal: 14,
+                    }}
+                >
+                    <Text style={{ fontSize: 14, marginRight: 8 }}>🔍</Text>
+                    <TextInput
+                        value={search}
+                        onChangeText={setSearch}
+                        placeholder="Search customer..."
+                        placeholderTextColor={COLORS.textMuted}
+                        style={{
+                            flex: 1,
+                            paddingVertical: 12,
+                            fontSize: 15,
+                            color: COLORS.text,
+                        }}
+                    />
+                </View>
+            </View>
+
+            <ScrollView
+                style={{ flex: 1, paddingHorizontal: 20 }}
+                showsVerticalScrollIndicator={false}
+                refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} />}
+            >
+                {isLoading && (
+                    <View style={{ paddingVertical: 40, alignItems: 'center' }}>
+                        <ActivityIndicator size="large" color={COLORS.success} />
+                    </View>
+                )}
+
+                {!isLoading && customers.length === 0 && (
+                    <View style={{ paddingVertical: 60, alignItems: 'center' }}>
+                        <Text style={{ fontSize: 48, marginBottom: 16 }}>👥</Text>
+                        <Text style={{ fontSize: 16, fontWeight: '600', color: COLORS.text }}>
+                            No customers yet
+                        </Text>
+                        <Text style={{ fontSize: 13, color: COLORS.textMuted, marginTop: 4, textAlign: 'center' }}>
+                            Add your first customer using the + button{'\n'}or they'll be created when you add transactions
+                        </Text>
+                    </View>
+                )}
+
+                {/* Udhar Section */}
+                {udharCustomers.length > 0 && (
+                    <>
+                        <Text
+                            style={{
+                                fontSize: 11,
+                                fontWeight: '700',
+                                color: COLORS.danger,
+                                letterSpacing: 1,
+                                marginBottom: 12,
+                            }}
+                        >
+                            UDHAR (CREDIT) · {udharCustomers.length} CUSTOMERS
+                        </Text>
+                        {udharCustomers.map((c) => renderCustomerRow(c, true))}
+                    </>
+                )}
+
+                {/* All Customers */}
+                {regularCustomers.length > 0 && (
+                    <>
+                        <Text
+                            style={{
+                                fontSize: 11,
+                                fontWeight: '700',
+                                color: COLORS.textMuted,
+                                letterSpacing: 1,
+                                marginTop: 24,
+                                marginBottom: 12,
+                            }}
+                        >
+                            ALL CUSTOMERS · {regularCustomers.length}
+                        </Text>
+                        {regularCustomers.map((c) => renderCustomerRow(c, false))}
+                    </>
+                )}
+                <View style={{ height: 40 }} />
+            </ScrollView>
+
+            {/* Add Customer Modal */}
+            <Modal visible={showAddModal} transparent animationType="fade">
+                <View
+                    style={{
+                        flex: 1,
+                        backgroundColor: 'rgba(0,0,0,0.4)',
+                        justifyContent: 'center',
+                        paddingHorizontal: 24,
+                    }}
+                >
+                    <View
+                        style={{
+                            backgroundColor: COLORS.card,
+                            borderRadius: 16,
+                            padding: 24,
+                        }}
+                    >
+                        <Text style={{ fontSize: 18, fontWeight: '700', color: COLORS.text, marginBottom: 20 }}>
+                            Add Customer
+                        </Text>
+
+                        <Text style={{ fontSize: 13, fontWeight: '600', color: COLORS.textMuted, marginBottom: 6 }}>
+                            Name *
+                        </Text>
+                        <TextInput
+                            value={newName}
+                            onChangeText={setNewName}
+                            placeholder="e.g. Raja Kumar"
+                            placeholderTextColor={COLORS.textMuted}
+                            style={{
+                                backgroundColor: COLORS.background,
+                                borderRadius: 10,
+                                borderWidth: 1,
+                                borderColor: COLORS.border,
+                                paddingHorizontal: 14,
+                                paddingVertical: 12,
+                                fontSize: 15,
+                                color: COLORS.text,
+                                marginBottom: 16,
+                            }}
+                        />
+
+                        <Text style={{ fontSize: 13, fontWeight: '600', color: COLORS.textMuted, marginBottom: 6 }}>
+                            Phone (optional)
+                        </Text>
+                        <TextInput
+                            value={newPhone}
+                            onChangeText={setNewPhone}
+                            placeholder="e.g. 9876543210"
+                            placeholderTextColor={COLORS.textMuted}
+                            keyboardType="phone-pad"
+                            maxLength={10}
+                            style={{
+                                backgroundColor: COLORS.background,
+                                borderRadius: 10,
+                                borderWidth: 1,
+                                borderColor: COLORS.border,
+                                paddingHorizontal: 14,
+                                paddingVertical: 12,
+                                fontSize: 15,
+                                color: COLORS.text,
+                                marginBottom: 24,
+                            }}
+                        />
+
+                        <View style={{ flexDirection: 'row', gap: 12 }}>
+                            <TouchableOpacity
+                                onPress={() => {
+                                    setShowAddModal(false);
+                                    setNewName('');
+                                    setNewPhone('');
+                                }}
+                                style={{
+                                    flex: 1,
+                                    paddingVertical: 14,
+                                    borderRadius: 10,
+                                    borderWidth: 1,
+                                    borderColor: COLORS.border,
+                                    alignItems: 'center',
+                                }}
+                            >
+                                <Text style={{ fontSize: 15, fontWeight: '600', color: COLORS.textMuted }}>
+                                    Cancel
+                                </Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                onPress={handleAddCustomer}
+                                disabled={!newName.trim() || addMutation.isPending}
+                                style={{
+                                    flex: 1.5,
+                                    paddingVertical: 14,
+                                    borderRadius: 10,
+                                    backgroundColor: newName.trim() ? COLORS.success : COLORS.border,
+                                    alignItems: 'center',
+                                }}
+                            >
+                                {addMutation.isPending ? (
+                                    <ActivityIndicator color={COLORS.white} />
+                                ) : (
+                                    <Text style={{ fontSize: 15, fontWeight: '700', color: COLORS.white }}>
+                                        Add Customer
+                                    </Text>
+                                )}
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+        </View>
+    );
+}
