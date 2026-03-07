@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import i18n from '../i18n';
 import type { Business, Customer, Transaction, DashboardStats } from '../types';
 

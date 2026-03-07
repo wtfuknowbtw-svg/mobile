@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { COLORS } from '../constants';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import * as ImagePicker from 'expo-image-picker';
 import { processOCR } from '../api/ai';
 
 interface CameraScanScreenProps {
@@ -20,6 +21,16 @@ export default function CameraScanScreen({ navigation }: CameraScanScreenProps) 
     const [cameraRef, setCameraRef] = useState<CameraView | null>(null);
     const [flashOn, setFlashOn] = useState<'off' | 'on'>('off');
     const [isProcessing, setIsProcessing] = useState(false);
+
+    // Request gallery permissions on mount
+    React.useEffect(() => {
+        (async () => {
+            const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+            if (status !== 'granted') {
+                console.log('Gallery permission not granted');
+            }
+        })();
+    }, []);
 
     if (!permission) {
         // Camera permissions are still loading.
@@ -48,33 +59,87 @@ export default function CameraScanScreen({ navigation }: CameraScanScreenProps) 
 
         setIsProcessing(true);
         try {
+            console.log('Taking picture...');
             const photo = await cameraRef.takePictureAsync({
                 base64: true,
-                quality: 0.5,
+                quality: 0.8,
+                skipProcessing: false,
             });
 
+            console.log('Photo taken, base64 length:', photo.base64?.length || 0);
+
             if (photo?.base64) {
-                const result = await processOCR({ base64Image: photo.base64 });
+                await processImageOCR(photo.base64, photo.uri || '');
+            } else {
+                Alert.alert("Error", "Failed to capture photo. Please try again.");
+            }
+        } catch (error) {
+            console.error("Camera error:", error);
+            Alert.alert("Camera Error", `Failed to capture photo: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`);
+        } finally {
+            setIsProcessing(false);
+        }
+    };
 
-                if (result.error) {
-                    Alert.alert("OCR Error", result.error);
-                    return;
-                }
+    const handleGalleryPick = async () => {
+        try {
+            // Request permissions first
+            const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+            if (permissionResult.status !== 'granted') {
+                Alert.alert("Permission Required", "Please grant gallery permission to select photos.");
+                return;
+            }
 
-                if (result.data && result.data.length > 0) {
-                    navigation.navigate('ReviewOCR', {
-                        receiptData: result.data[0],
-                        imageUrl: photo.uri
-                    });
+            const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                allowsEditing: true,
+                aspect: [4, 3],
+                quality: 0.8,
+                base64: true,
+                presentationStyle: 'pageSheet',
+            });
+
+            if (!result.canceled && result.assets && result.assets.length > 0) {
+                setIsProcessing(true);
+                const asset = result.assets[0];
+                
+                if (asset.base64) {
+                    await processImageOCR(asset.base64, asset.uri || '');
                 } else {
-                    Alert.alert("No Data", "Could not extract transaction data from this image.");
+                    Alert.alert("Error", "Could not process image. Please try again.");
                 }
             }
         } catch (error) {
-            console.error(error);
-            Alert.alert("Error", "Failed to capture or process image.");
+            console.error("Gallery error:", error);
+            Alert.alert("Gallery Error", "Failed to pick image from gallery. Please try again.");
         } finally {
             setIsProcessing(false);
+        }
+    };
+
+    const processImageOCR = async (base64: string, uri: string) => {
+        try {
+            console.log('Starting OCR processing...');
+            const result = await processOCR({ base64Image: base64 });
+
+            if (result.error) {
+                console.error('OCR Error:', result.error);
+                Alert.alert("OCR Error", `Failed to process image: ${result.error}`);
+                return;
+            }
+
+            if (result.data && result.data.length > 0) {
+                console.log('OCR Success:', result.data[0]);
+                navigation.navigate('ReviewOCR', {
+                    receiptData: result.data[0],
+                    imageUrl: uri
+                });
+            } else {
+                Alert.alert("No Data", "Could not extract transaction data from this image. Please try a clearer photo with better lighting.");
+            }
+        } catch (error) {
+            console.error('Processing Error:', error);
+            Alert.alert("Processing Error", `Failed to process the image: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`);
         }
     };
 
@@ -134,11 +199,24 @@ export default function CameraScanScreen({ navigation }: CameraScanScreenProps) 
                     {/* Overlay Info */}
                     {!isProcessing && (
                         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'transparent' }}>
-                            <Text style={{ fontSize: 15, color: COLORS.white, fontWeight: '600', textAlign: 'center' }}>
-                                Point at paper register
+                            <View style={{ backgroundColor: 'rgba(0,0,0,0.7)', paddingHorizontal: 16, paddingVertical: 12, borderRadius: 8 }}>
+                                <Text style={{ fontSize: 16, color: COLORS.white, fontWeight: '700', textAlign: 'center' }}>
+                                    📸 Scan Any Document
+                                </Text>
+                                <Text style={{ fontSize: 13, color: '#ccc', marginTop: 4, textAlign: 'center' }}>
+                                    Bills • Receipts • Invoices • Registers
+                                </Text>
+                            </View>
+                        </View>
+                    )}
+                    {isProcessing && (
+                        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.8)' }}>
+                            <ActivityIndicator size="large" color={COLORS.success} />
+                            <Text style={{ fontSize: 16, color: COLORS.white, fontWeight: '600', marginTop: 12 }}>
+                                🤖 AI is Reading...
                             </Text>
-                            <Text style={{ fontSize: 13, color: '#999', marginTop: 4, textAlign: 'center' }}>
-                                Make sure text is readable
+                            <Text style={{ fontSize: 13, color: '#ccc', marginTop: 4, textAlign: 'center' }}>
+                                Extracting text & amounts
                             </Text>
                         </View>
                     )}
@@ -150,7 +228,7 @@ export default function CameraScanScreen({ navigation }: CameraScanScreenProps) 
                 style={{
                     flexDirection: 'row',
                     justifyContent: 'center',
-                    gap: 16,
+                    gap: 12,
                     marginTop: 16,
                 }}
             >
@@ -159,24 +237,36 @@ export default function CameraScanScreen({ navigation }: CameraScanScreenProps) 
                         flexDirection: 'row',
                         alignItems: 'center',
                         backgroundColor: 'rgba(255,255,255,0.1)',
-                        paddingHorizontal: 12,
+                        paddingHorizontal: 10,
                         paddingVertical: 6,
                         borderRadius: 20,
                     }}
                 >
-                    <Text style={{ fontSize: 12, color: '#999' }}>💡 Tip: Hold steady</Text>
+                    <Text style={{ fontSize: 11, color: '#ccc' }}>💡 Good lighting</Text>
                 </View>
                 <View
                     style={{
                         flexDirection: 'row',
                         alignItems: 'center',
                         backgroundColor: 'rgba(255,255,255,0.1)',
-                        paddingHorizontal: 12,
+                        paddingHorizontal: 10,
                         paddingVertical: 6,
                         borderRadius: 20,
                     }}
                 >
-                    <Text style={{ fontSize: 12, color: '#999' }}>✂ Auto-crop</Text>
+                    <Text style={{ fontSize: 11, color: '#ccc' }}>📐 Flat surface</Text>
+                </View>
+                <View
+                    style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        backgroundColor: 'rgba(255,255,255,0.1)',
+                        paddingHorizontal: 10,
+                        paddingVertical: 6,
+                        borderRadius: 20,
+                    }}
+                >
+                    <Text style={{ fontSize: 11, color: '#ccc' }}>🔍 Clear text</Text>
                 </View>
             </View>
 
@@ -195,7 +285,7 @@ export default function CameraScanScreen({ navigation }: CameraScanScreenProps) 
                         letterSpacing: 1,
                     }}
                 >
-                    {isProcessing ? "Analyzing with AI..." : "Tap to capture"}
+                    {isProcessing ? "🤖 AI Processing..." : "📸 Capture Document"}
                 </Text>
                 <TouchableOpacity
                     onPress={handleCapture}
@@ -236,6 +326,8 @@ export default function CameraScanScreen({ navigation }: CameraScanScreenProps) 
                 }}
             >
                 <TouchableOpacity
+                    onPress={handleGalleryPick}
+                    disabled={isProcessing}
                     style={{
                         paddingHorizontal: 20,
                         paddingVertical: 12,

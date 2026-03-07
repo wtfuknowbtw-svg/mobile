@@ -24,7 +24,7 @@ export const sendOtp = async (phone: string) => {
 
 export const verifyOtp = async (phone: string, otp: string) => {
     try {
-        const response = await fetch(`${BACKEND_URL}/auth/login`, {
+        const response = await fetch(`${BACKEND_URL}/mobile-login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ phone, otp }),

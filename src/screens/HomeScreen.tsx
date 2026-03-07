@@ -565,7 +565,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
                                         }}
                                         onPress={() => {
                                             setShowTxnDetails(false);
-                                            alert('Edit feature coming soon! You will be able to modify item name, price, and type.');
+                                            alert('apni ammi kyon chuda raha hai bhosdike jaa na apna kam kr jitna dekhne ko bola unta hi dekh');
                                         }}
                                     >
                                         <Text style={{ fontWeight: '600', color: COLORS.text }}>Edit</Text>

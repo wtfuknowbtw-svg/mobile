@@ -4,13 +4,19 @@ import type { Transaction } from '../types';
 export const processOCR = async (
     payload: { imageUrl?: string; base64Image?: string; transcript?: string }
 ): Promise<{ data?: Partial<Transaction>[]; error?: string }> => {
-    const response = await apiPost<{ data: Partial<Transaction>[] }>('/ai/ocr', payload);
-    
-    if (response.error) {
-        return { error: response.error };
-    }
+    try {
+        const response = await apiPost<{ data: Partial<Transaction>[] }>('/ai/ocr', payload);
+        
+        if (response.error) {
+            console.error('Backend OCR failed:', response.error);
+            return { error: response.error };
+        }
 
-    return { data: response.data?.data || response.data as Partial<Transaction>[] };
+        return { data: response.data?.data || response.data as Partial<Transaction>[] };
+    } catch (error) {
+        console.error('Backend OCR error:', error);
+        return { error: error instanceof Error ? error.message : 'Failed to process OCR' };
+    }
 };
 
 /**

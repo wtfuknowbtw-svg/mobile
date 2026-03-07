@@ -26,9 +26,9 @@ export const FONTS = {
 } as const;
 
 export const API_BASE_URL = __DEV__
-    // Using the dev machine's local network IP so physical device can connect
-    ? 'http://10.183.238.52:3000/api'
-    : 'https://apnakhata.vercel.app/api';
+    // Using production backend for testing
+    ? 'https://apnabackend-theta.vercel.app/api'
+    : 'https://apnabackend-theta.vercel.app/api';
 
 export const SUPPORTED_LANGUAGES = [
     { code: 'hi', label: 'हिंदी', labelEn: 'Hindi', flag: 'IN' },

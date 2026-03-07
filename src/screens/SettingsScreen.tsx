@@ -16,7 +16,7 @@ interface SettingsScreenProps {
 }
 
 export default function SettingsScreen({ navigation }: SettingsScreenProps) {
-    const { setLoggedIn, phone, language } = useAppStore();
+    const { logout, phone, language } = useAppStore();
 
     const getLanguageLabel = () => {
         const map: Record<string, string> = {
@@ -36,7 +36,7 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
                 text: 'Logout',
                 style: 'destructive',
                 onPress: () => {
-                    setLoggedIn(false);
+                    logout(); // This clears all auth data (token, phone, businessId, isLoggedIn)
                     navigation.reset({
                         index: 0,
                         routes: [{ name: 'Splash' }],

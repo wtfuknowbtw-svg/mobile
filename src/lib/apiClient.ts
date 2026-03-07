@@ -17,6 +17,11 @@ export async function apiRequest<T = any>(
 ): Promise<{ data?: T; error?: string }> {
     const token = getToken();
     const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
+    
+    console.log('API Request - Endpoint:', endpoint);
+    console.log('API Request - Full URL:', url);
+    console.log('API Request - API_BASE_URL:', API_BASE_URL);
+    console.log('API Request - Token:', token ? 'Bearer ' + token.substring(0, 20) + '...' : 'NO TOKEN');
 
     const headers: HeadersInit = {
         'Content-Type': 'application/json',
@@ -26,6 +31,9 @@ export async function apiRequest<T = any>(
     // Add JWT token if available
     if (token) {
         headers['Authorization'] = `Bearer ${token}`;
+        console.log('API Request - Authorization Header:', `Bearer ${token.substring(0, 20)}...`);
+    } else {
+        console.warn('API Request - No token available for protected endpoint');
     }
 
     try {

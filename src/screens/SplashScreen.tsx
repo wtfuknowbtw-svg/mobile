@@ -43,9 +43,8 @@ export default function SplashScreen({ navigation }: SplashScreenProps) {
             }),
         ]).start();
 
-        // Check if user is already logged in
+        // Simple check - if user has token, navigate to main app
         if (token && isLoggedIn && businessId) {
-            // Navigate to main app after a short delay
             setTimeout(() => {
                 navigation.reset({
                     index: 0,
