@@ -12,6 +12,7 @@ import { useAppStore } from '../store/useAppStore';
 import { useQuery } from '@tanstack/react-query';
 import { getTransactions } from '../api/transactions';
 import type { Transaction } from '../types';
+import i18n from '../i18n';
 
 interface ReportsScreenProps {
     navigation: any;
@@ -104,7 +105,7 @@ export default function ReportsScreen({ navigation }: ReportsScreenProps) {
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                     <Text style={{ fontSize: 16, marginRight: 8 }}>📊</Text>
                     <Text style={{ fontSize: 22, fontWeight: '800', color: COLORS.text }}>
-                        Reports
+                        {i18n.t('reports.title')}
                     </Text>
                 </View>
                 <TouchableOpacity

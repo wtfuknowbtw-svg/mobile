@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { COLORS } from '../constants';
 import { useAppStore } from '../store/useAppStore';
+import i18n from '../i18n';
 
 interface SettingsScreenProps {
     navigation: any;
@@ -30,10 +31,10 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
     };
 
     const handleLogout = () => {
-        Alert.alert('Logout', 'Are you sure you want to logout?', [
-            { text: 'Cancel', style: 'cancel' },
+        Alert.alert(i18n.t('settings.logout'), 'Are you sure you want to logout?', [
+            { text: i18n.t('common.cancel'), style: 'cancel' },
             {
-                text: 'Logout',
+                text: i18n.t('settings.logout'),
                 style: 'destructive',
                 onPress: () => {
                     logout(); // This clears all auth data (token, phone, businessId, isLoggedIn)
@@ -49,25 +50,25 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
     const menuItems = [
         {
             icon: '🏪',
-            label: 'Business Profile',
+            label: i18n.t('settings.businessProfile'),
             subtitle: 'Name, type, GSTIN',
             action: () => Alert.alert('Coming Soon', 'Business profile editing will be available soon.'),
         },
         {
             icon: '🌐',
-            label: 'Language',
+            label: i18n.t('settings.language'),
             subtitle: getLanguageLabel(),
             action: () => navigation.navigate('LanguageSelect'),
         },
         {
             icon: '💳',
-            label: 'Subscription & Billing',
-            subtitle: 'Free Plan',
+            label: i18n.t('settings.subscription'),
+            subtitle: i18n.t('settings.freePlan'),
             action: () => Alert.alert('Free Plan', 'You are on the free plan. Upgrade coming soon!'),
         },
         {
             icon: '💬',
-            label: 'Help / Support',
+            label: i18n.t('settings.help'),
             subtitle: 'Chat on WhatsApp',
             action: () => {
                 Linking.openURL('https://wa.me/919876543210?text=Hi%20I%20need%20help%20with%20ApnaKhata');
@@ -90,7 +91,7 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                     <Text style={{ fontSize: 16, marginRight: 8 }}>⚙️</Text>
                     <Text style={{ fontSize: 22, fontWeight: '800', color: COLORS.text }}>
-                        Settings
+                        {i18n.t('settings.title')}
                     </Text>
                 </View>
             </View>
@@ -133,7 +134,7 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
                                 color: COLORS.text,
                             }}
                         >
-                            My Business
+                            {i18n.t('settings.myBusiness')}
                         </Text>
                         <Text
                             style={{
@@ -142,7 +143,7 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
                                 marginTop: 2,
                             }}
                         >
-                            +91 {phone || '---'} · Free Plan
+                            +91 {phone || '---'} · {i18n.t('settings.freePlan')}
                         </Text>
                     </View>
                 </View>

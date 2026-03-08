@@ -17,12 +17,13 @@ interface SplashScreenProps {
 }
 
 export default function SplashScreen({ navigation }: SplashScreenProps) {
-    const { token, isLoggedIn, businessId } = useAppStore();
+    const { token, isLoggedIn, businessId, hasHydrated } = useAppStore();
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const slideAnim = useRef(new Animated.Value(40)).current;
     const buttonAnim = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
+        // Start animations
         Animated.sequence([
             Animated.parallel([
                 Animated.timing(fadeAnim, {
@@ -43,16 +44,39 @@ export default function SplashScreen({ navigation }: SplashScreenProps) {
             }),
         ]).start();
 
-        // Simple check - if user has token, navigate to main app
-        if (token && isLoggedIn && businessId) {
-            setTimeout(() => {
-                navigation.reset({
-                    index: 0,
-                    routes: [{ name: 'MainTabs' }],
-                });
-            }, 1500);
+        // Check auth state after storage has hydrated
+        const checkAuthAndNavigate = () => {
+            console.log('🔍 Splash - Checking auth state...');
+            console.log('🔍 Splash - Token exists:', !!token);
+            console.log('🔍 Splash - Is logged in:', isLoggedIn);
+            console.log('🔍 Splash - Business ID:', businessId);
+            console.log('🔍 Splash - Has hydrated:', hasHydrated);
+
+            // If user has valid auth state, navigate to main app
+            if (token && isLoggedIn && businessId) {
+                console.log('✅ Splash - User authenticated, navigating to MainTabs');
+                setTimeout(() => {
+                    navigation.reset({
+                        index: 0,
+                        routes: [{ name: 'MainTabs' }],
+                    });
+                }, 1000);
+            } else {
+                console.log('❌ Splash - No valid auth, showing Get Started button');
+            }
+        };
+
+        // Wait a bit for Zustand to hydrate from AsyncStorage
+        if (hasHydrated) {
+            checkAuthAndNavigate();
+        } else {
+            // If not hydrated yet, wait and check again
+            const timer = setTimeout(() => {
+                checkAuthAndNavigate();
+            }, 1000);
+            return () => clearTimeout(timer);
         }
-    }, [token, isLoggedIn, businessId, navigation]);
+    }, [token, isLoggedIn, businessId, hasHydrated, navigation]);
 
     return (
         <View style={{ flex: 1, backgroundColor: COLORS.background }}>

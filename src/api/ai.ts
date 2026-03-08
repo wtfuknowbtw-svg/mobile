@@ -5,14 +5,28 @@ export const processOCR = async (
     payload: { imageUrl?: string; base64Image?: string; transcript?: string }
 ): Promise<{ data?: Partial<Transaction>[]; error?: string }> => {
     try {
+        console.log('🔍 OCR Request Payload:', payload);
         const response = await apiPost<{ data: Partial<Transaction>[] }>('/ai/ocr', payload);
+        
+        console.log('📥 OCR Raw Response:', response);
+        console.log('📥 OCR Response Data:', response.data);
+        console.log('📥 OCR Response Error:', response.error);
         
         if (response.error) {
             console.error('Backend OCR failed:', response.error);
             return { error: response.error };
         }
 
-        return { data: response.data?.data || response.data as Partial<Transaction>[] };
+        const resultData = response.data?.data || response.data as Partial<Transaction>[];
+        console.log('📊 Final OCR Result Data:', resultData);
+        console.log('📊 Result Data Length:', resultData?.length);
+        
+        if (resultData && resultData.length > 0) {
+            console.log('📊 First Transaction:', resultData[0]);
+            console.log('📊 Transaction Fields:', Object.keys(resultData[0] || {}));
+        }
+
+        return { data: resultData };
     } catch (error) {
         console.error('Backend OCR error:', error);
         return { error: error instanceof Error ? error.message : 'Failed to process OCR' };

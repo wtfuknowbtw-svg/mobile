@@ -8,11 +8,14 @@ import {
     TextInput,
     ActivityIndicator,
     Alert,
+    Dimensions,
 } from 'react-native';
 import { COLORS } from '../constants';
 import { useAppStore } from '../store/useAppStore';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { createTransaction } from '../api/transactions';
+
+const { width } = Dimensions.get('window');
 
 interface ReviewOCRScreenProps {
     navigation: any;
@@ -22,7 +25,8 @@ interface ReviewOCRScreenProps {
 export default function ReviewOCRScreen({ navigation, route }: ReviewOCRScreenProps) {
     const { businessId } = useAppStore();
     const { receiptData, imageUrl } = route.params || {};
-
+    
+    const [isEditMode, setIsEditMode] = useState(false);
     const [parsedData, setParsedData] = useState({
         customer: receiptData?.customer_name || receiptData?.customerName || 'Unknown Customer',
         date: receiptData?.date || new Date().toLocaleDateString(),
@@ -31,6 +35,7 @@ export default function ReviewOCRScreen({ navigation, route }: ReviewOCRScreenPr
         total: (receiptData?.price || 0).toString(),
     });
 
+    const confidence = receiptData?.confidence || receiptData?.aiConfidence || 90;
     const queryClient = useQueryClient();
 
     const mutation = useMutation({
@@ -53,7 +58,7 @@ export default function ReviewOCRScreen({ navigation, route }: ReviewOCRScreenPr
             price: Number(parsedData.total.replace(/[^0-9.]/g, '')),
             type: parsedData.type as any,
             sourceType: 'ocr',
-            aiConfidence: receiptData?.confidence || receiptData?.aiConfidence || 90,
+            aiConfidence: confidence,
             rawText: receiptData?.raw_text || receiptData?.rawText,
             date: new Date().toISOString(),
             isConfirmed: true,
@@ -61,279 +66,328 @@ export default function ReviewOCRScreen({ navigation, route }: ReviewOCRScreenPr
         });
     };
 
+    const getConfidenceColor = (score: number) => {
+        if (score >= 90) return COLORS.success;
+        if (score >= 70) return COLORS.warning;
+        return COLORS.danger;
+    };
+
+    const getConfidenceLabel = (score: number) => {
+        if (score >= 90) return 'High';
+        if (score >= 70) return 'Medium';
+        return 'Low';
+    };
+
+    const InputField = ({ 
+        icon, 
+        label, 
+        value, 
+        onChangeText, 
+        keyboardType = 'default',
+        editable = isEditMode,
+        isAmount = false 
+    }: {
+        icon: string;
+        label: string;
+        value: string;
+        onChangeText: (text: string) => void;
+        keyboardType?: 'default' | 'numeric';
+        editable?: boolean;
+        isAmount?: boolean;
+    }) => (
+        <View style={{ marginBottom: 16 }}>
+            <Text style={{
+                fontSize: 12,
+                fontWeight: '600',
+                color: COLORS.textMuted,
+                marginBottom: 8,
+                textTransform: 'uppercase',
+                letterSpacing: 0.5,
+            }}>
+                {label}
+            </Text>
+            <View style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                backgroundColor: COLORS.card,
+                borderRadius: 12,
+                borderWidth: 1,
+                borderColor: editable ? COLORS.primary : COLORS.border,
+                paddingHorizontal: 16,
+                paddingVertical: 12,
+            }}>
+                <Text style={{ fontSize: 18, marginRight: 12 }}>{icon}</Text>
+                <TextInput
+                    style={{
+                        flex: 1,
+                        fontSize: 16,
+                        color: COLORS.text,
+                        fontWeight: '500',
+                    }}
+                    value={value}
+                    onChangeText={onChangeText}
+                    keyboardType={keyboardType}
+                    editable={editable}
+                    placeholderTextColor={COLORS.textMuted}
+                />
+                {isAmount && (
+                    <Text style={{
+                        fontSize: 16,
+                        color: COLORS.textMuted,
+                        fontWeight: '600',
+                    }}>
+                        ₹
+                    </Text>
+                )}
+            </View>
+        </View>
+    );
+
+    const TypeSelector = () => (
+        <View style={{ marginBottom: 16 }}>
+            <Text style={{
+                fontSize: 12,
+                fontWeight: '600',
+                color: COLORS.textMuted,
+                marginBottom: 8,
+                textTransform: 'uppercase',
+                letterSpacing: 0.5,
+            }}>
+                Transaction Type
+            </Text>
+            <View style={{
+                flexDirection: 'row',
+                backgroundColor: COLORS.card,
+                borderRadius: 12,
+                borderWidth: 1,
+                borderColor: COLORS.border,
+                padding: 4,
+            }}>
+                {[
+                    { value: 'cash', label: 'Cash', icon: '💵', color: COLORS.success },
+                    { value: 'credit', label: 'Credit', icon: '🤝', color: COLORS.warning },
+                ].map((type) => (
+                    <TouchableOpacity
+                        key={type.value}
+                        style={{
+                            flex: 1,
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            paddingVertical: 12,
+                            borderRadius: 8,
+                            backgroundColor: parsedData.type === type.value ? type.color : 'transparent',
+                        }}
+                        onPress={() => isEditMode && setParsedData(prev => ({ ...prev, type: type.value }))}
+                        disabled={!isEditMode}
+                    >
+                        <Text style={{ fontSize: 16, marginRight: 6 }}>{type.icon}</Text>
+                        <Text style={{
+                            fontSize: 14,
+                            fontWeight: '600',
+                            color: parsedData.type === type.value ? COLORS.white : COLORS.text,
+                        }}>
+                            {type.label}
+                        </Text>
+                    </TouchableOpacity>
+                ))}
+            </View>
+        </View>
+    );
+
     return (
-        <View style={{ flex: 1, backgroundColor: COLORS.background }}>
-            <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
+        <View style={{ flex: 1, backgroundColor: '#f8f9fa' }}>
+            <StatusBar barStyle="dark-content" backgroundColor="#f8f9fa" />
 
             {/* Header */}
-            <View
-                style={{
+            <View style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                paddingTop: 52,
+                paddingHorizontal: 20,
+                paddingBottom: 16,
+                backgroundColor: '#ffffff',
+                borderBottomWidth: 1,
+                borderBottomColor: '#e9ecef',
+            }}>
+                <TouchableOpacity onPress={() => navigation.goBack()}>
+                    <Text style={{ fontSize: 24, color: COLORS.text, fontWeight: '500' }}>←</Text>
+                </TouchableOpacity>
+                <View style={{ alignItems: 'center' }}>
+                    <Text style={{ fontSize: 18, fontWeight: '700', color: COLORS.text }}>
+                        Review Transaction
+                    </Text>
+                    <Text style={{ fontSize: 12, color: COLORS.textMuted, marginTop: 2 }}>
+                        AI-powered data extraction
+                    </Text>
+                </View>
+                <TouchableOpacity 
+                    onPress={() => setIsEditMode(!isEditMode)}
+                    style={{
+                        paddingHorizontal: 12,
+                        paddingVertical: 6,
+                        backgroundColor: isEditMode ? COLORS.primary : '#f1f3f5',
+                        borderRadius: 20,
+                    }}
+                >
+                    <Text style={{
+                        fontSize: 12,
+                        fontWeight: '600',
+                        color: isEditMode ? COLORS.white : COLORS.text,
+                    }}>
+                        {isEditMode ? 'Done' : 'Edit'}
+                    </Text>
+                </TouchableOpacity>
+            </View>
+
+            <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
+                {/* Confidence Badge */}
+                <View style={{
                     flexDirection: 'row',
                     justifyContent: 'space-between',
                     alignItems: 'center',
-                    paddingTop: 52,
                     paddingHorizontal: 20,
-                    paddingBottom: 12,
-                }}
-            >
-                <TouchableOpacity onPress={() => navigation.goBack()}>
-                    <Text style={{ fontSize: 16, color: COLORS.text }}>←</Text>
-                </TouchableOpacity>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Text style={{ fontSize: 14, marginRight: 8 }}>📋</Text>
-                    <Text style={{ fontSize: 18, fontWeight: '700', color: COLORS.text }}>
-                        Review Extracted Data
-                    </Text>
-                </View>
-                <Text style={{ fontSize: 18, color: COLORS.textMuted }}>•••</Text>
-            </View>
-
-            <ScrollView
-                style={{ flex: 1, paddingHorizontal: 20 }}
-                showsVerticalScrollIndicator={false}
-            >
-                {/* Image Preview Card */}
-                <View
-                    style={{
-                        backgroundColor: COLORS.card,
-                        borderRadius: 12,
-                        padding: 16,
-                        borderWidth: 1,
-                        borderColor: COLORS.border,
-                        marginBottom: 20,
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                    }}
-                >
-                    <View
-                        style={{
-                            width: 56,
-                            height: 56,
-                            borderRadius: 8,
-                            backgroundColor: COLORS.successLight,
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                            marginRight: 14,
-                        }}
-                    >
-                        <Text style={{ fontSize: 28 }}>📸</Text>
-                    </View>
-                    <View>
-                        <Text
-                            style={{
-                                fontSize: 14,
-                                fontWeight: '600',
-                                color: COLORS.text,
-                            }}
-                        >
-                            khata_photo_1.jpg
+                    paddingVertical: 16,
+                    backgroundColor: '#ffffff',
+                    marginBottom: 1,
+                }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <View style={{
+                            width: 8,
+                            height: 8,
+                            borderRadius: 4,
+                            backgroundColor: getConfidenceColor(confidence),
+                            marginRight: 8,
+                        }} />
+                        <Text style={{ fontSize: 14, color: COLORS.text, fontWeight: '500' }}>
+                            AI Confidence
                         </Text>
-                        <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
-                            <View
-                                style={{
-                                    backgroundColor: COLORS.successLight,
-                                    paddingHorizontal: 8,
-                                    paddingVertical: 2,
-                                    borderRadius: 4,
-                                }}
-                            >
-                                <Text
-                                    style={{ fontSize: 10, fontWeight: '600', color: COLORS.success }}
-                                >
-                                    Google Vision API
-                                </Text>
-                            </View>
-                            <View
-                                style={{
-                                    backgroundColor: COLORS.primaryLight,
-                                    paddingHorizontal: 8,
-                                    paddingVertical: 2,
-                                    borderRadius: 4,
-                                }}
-                            >
-                                <Text
-                                    style={{ fontSize: 10, fontWeight: '600', color: COLORS.primary }}
-                                >
-                                    AI Parsed
-                                </Text>
-                            </View>
-                        </View>
+                    </View>
+                    <View style={{
+                        paddingHorizontal: 12,
+                        paddingVertical: 4,
+                        backgroundColor: getConfidenceColor(confidence) + '20',
+                        borderRadius: 12,
+                        borderWidth: 1,
+                        borderColor: getConfidenceColor(confidence),
+                    }}>
+                        <Text style={{
+                            fontSize: 12,
+                            fontWeight: '700',
+                            color: getConfidenceColor(confidence),
+                        }}>
+                            {confidence}% {getConfidenceLabel(confidence)}
+                        </Text>
                     </View>
                 </View>
 
-                {/* Raw OCR Text */}
-                <Text
-                    style={{
-                        fontSize: 11,
-                        fontWeight: '700',
-                        color: COLORS.textMuted,
-                        letterSpacing: 1,
-                        marginBottom: 8,
-                    }}
-                >
-                    RAW OCR TEXT
-                </Text>
-                <View
-                    style={{
-                        backgroundColor: COLORS.card,
-                        borderRadius: 12,
-                        padding: 16,
-                        borderWidth: 1,
-                        borderColor: COLORS.border,
-                        marginBottom: 20,
-                    }}
-                >
-                    <Text
-                        style={{
-                            fontSize: 14,
-                            color: COLORS.text,
-                            lineHeight: 22,
-                            fontFamily: 'monospace',
-                        }}
-                    >
-                        Raja - 2 kg daal   500/-{'\n'}
-                        Chawal 1kg  - 45{'\n'}
-                        Date : 3/3/26
-                    </Text>
+                {/* Form Card */}
+                <View style={{
+                    backgroundColor: '#ffffff',
+                    margin: 20,
+                    borderRadius: 16,
+                    padding: 20,
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.05,
+                    shadowRadius: 8,
+                    elevation: 3,
+                }}>
+                    <InputField
+                        icon="👤"
+                        label="Customer Name"
+                        value={parsedData.customer}
+                        onChangeText={(text) => setParsedData(prev => ({ ...prev, customer: text }))}
+                    />
+
+                    <InputField
+                        icon="📦"
+                        label="Item Description"
+                        value={parsedData.items}
+                        onChangeText={(text) => setParsedData(prev => ({ ...prev, items: text }))}
+                    />
+
+                    <InputField
+                        icon="💰"
+                        label="Amount"
+                        value={parsedData.total}
+                        onChangeText={(text) => setParsedData(prev => ({ ...prev, total: text }))}
+                        keyboardType="numeric"
+                        isAmount={true}
+                    />
+
+                    <TypeSelector />
+
+                    <InputField
+                        icon="📅"
+                        label="Date"
+                        value={parsedData.date}
+                        onChangeText={(text) => setParsedData(prev => ({ ...prev, date: text }))}
+                    />
                 </View>
 
-                {/* AI Parsed Data */}
-                <Text
-                    style={{
-                        fontSize: 11,
-                        fontWeight: '700',
-                        color: COLORS.textMuted,
-                        letterSpacing: 1,
-                        marginBottom: 4,
-                    }}
-                >
-                    AI PARSED DATA
-                </Text>
-                <Text
-                    style={{
-                        fontSize: 11,
-                        color: COLORS.textMuted,
-                        marginBottom: 12,
-                    }}
-                >
-                    EXTRACTED BY AI, TAP TO EDIT
-                </Text>
-
-                <View
-                    style={{
-                        backgroundColor: COLORS.card,
-                        borderRadius: 12,
-                        borderWidth: 1,
-                        borderColor: COLORS.border,
-                        overflow: 'hidden',
-                        marginBottom: 24,
-                    }}
-                >
-                    {Object.entries(parsedData).map(([key, value], i) => (
-                        <View
-                            key={key}
-                            style={{
-                                flexDirection: 'row',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                                paddingVertical: 14,
-                                paddingHorizontal: 16,
-                                borderBottomWidth: i < Object.keys(parsedData).length - 1 ? 1 : 0,
-                                borderBottomColor: COLORS.border,
-                            }}
-                        >
-                            <Text
-                                style={{
-                                    fontSize: 14,
-                                    color: COLORS.textMuted,
-                                    fontWeight: '500',
-                                    textTransform: 'capitalize',
-                                }}
-                            >
-                                {key}
-                            </Text>
-                            <Text
-                                style={{
-                                    fontSize: 14,
-                                    color: key === 'type' ? COLORS.danger : COLORS.text,
-                                    fontWeight: '600',
-                                }}
-                            >
-                                {value}
-                            </Text>
-                        </View>
-                    ))}
+                {/* Source Info */}
+                <View style={{
+                    backgroundColor: '#ffffff',
+                    marginHorizontal: 20,
+                    marginBottom: 20,
+                    borderRadius: 12,
+                    padding: 16,
+                    borderWidth: 1,
+                    borderColor: '#e9ecef',
+                }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                        <Text style={{ fontSize: 12, color: COLORS.textMuted, marginRight: 8 }}>
+                            Source:
+                        </Text>
+                        <Text style={{ fontSize: 12, color: COLORS.primary, fontWeight: '600' }}>
+                            OCR Scanner
+                        </Text>
+                    </View>
+                    <Text style={{ fontSize: 11, color: COLORS.textMuted }}>
+                        Data extracted using AI vision technology
+                    </Text>
                 </View>
             </ScrollView>
 
-            {/* Bottom Buttons */}
-            <View
-                style={{
-                    flexDirection: 'row',
-                    paddingHorizontal: 20,
-                    paddingBottom: 40,
-                    paddingTop: 16,
-                    gap: 12,
-                    backgroundColor: COLORS.background,
-                }}
-            >
-                <TouchableOpacity
-                    onPress={() => navigation.goBack()}
-                    style={{
-                        flex: 1,
-                        paddingVertical: 14,
-                        borderRadius: 12,
-                        borderWidth: 1.5,
-                        borderColor: COLORS.border,
-                        alignItems: 'center',
-                        flexDirection: 'row',
-                        justifyContent: 'center',
-                        backgroundColor: COLORS.card,
-                    }}
-                >
-                    <Text style={{ fontSize: 14, marginRight: 6 }}>✏️</Text>
-                    <Text
-                        style={{
-                            fontSize: 14,
-                            fontWeight: '600',
-                            color: COLORS.text,
-                        }}
-                    >
-                        Edit
-                    </Text>
-                </TouchableOpacity>
+            {/* Bottom Button */}
+            <View style={{
+                backgroundColor: '#ffffff',
+                paddingHorizontal: 20,
+                paddingVertical: 16,
+                borderTopWidth: 1,
+                borderTopColor: '#e9ecef',
+            }}>
                 <TouchableOpacity
                     onPress={handleConfirm}
                     disabled={mutation.isPending}
-                    activeOpacity={0.85}
+                    activeOpacity={0.8}
                     style={{
-                        flex: 1.5,
-                        paddingVertical: 14,
+                        backgroundColor: mutation.isPending ? '#e9ecef' : COLORS.success,
                         borderRadius: 12,
-                        backgroundColor: mutation.isPending ? COLORS.border : COLORS.success,
-                        alignItems: 'center',
+                        paddingVertical: 16,
                         flexDirection: 'row',
+                        alignItems: 'center',
                         justifyContent: 'center',
                         shadowColor: COLORS.success,
                         shadowOffset: { width: 0, height: 4 },
-                        shadowOpacity: 0.3,
+                        shadowOpacity: 0.2,
                         shadowRadius: 8,
-                        elevation: 6,
+                        elevation: 4,
                     }}
                 >
                     {mutation.isPending ? (
                         <ActivityIndicator color={COLORS.white} />
                     ) : (
                         <>
-                            <Text style={{ fontSize: 14, marginRight: 6 }}>✅</Text>
-                            <Text
-                                style={{
-                                    fontSize: 14,
-                                    fontWeight: '700',
-                                    color: COLORS.white,
-                                }}
-                            >
-                                Confirm & Save
+                            <Text style={{ fontSize: 20, marginRight: 8, color: COLORS.white }}>💰</Text>
+                            <Text style={{
+                                fontSize: 16,
+                                fontWeight: '700',
+                                color: COLORS.white,
+                            }}>
+                                Save Transaction
                             </Text>
                         </>
                     )}

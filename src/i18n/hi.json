@@ -30,11 +30,12 @@
     },
     "customers": {
         "title": "ग्राहक",
-        "search": "ग्राहक खोजें...",
+        "search": "ग्राहक खोजें",
         "udhar": "उधार (क्रेडिट)",
         "all": "सभी ग्राहक",
-        "owed": "बकाया",
-        "supplier": "सप्लायर"
+        "owed": "बाकी",
+        "supplier": "सप्लायर",
+        "noPhone": "फोन नहीं"
     },
     "reports": {
         "title": "रिपोर्ट्स",
@@ -61,12 +62,18 @@
     },
     "camera": {
         "scanTitle": "पेपर / रजिस्टर स्कैन करें",
-        "hint": "पेपर रजिस्टर की तरफ़ पॉइंट करें",
+        "documentScanner": "डॉक्यूमेंट स्कैनर",
+        "positionDocument": "दस्तावेज़ को फ्रेम के अंदर रखें",
+        "alignDocument": "दस्तावेज़ को फ्रेम के अनुसार संरेखित करें",
         "hintSub": "text readable हो - ये ज़रूरी है",
         "gallery": "गैलरी",
         "flash": "फ्लैश",
         "tipHold": "टिप: स्थिर रखें",
-        "autoCrop": "ऑटो-क्रॉप"
+        "autoCrop": "ऑटो-क्रॉप",
+        "aiProcessing": "AI प्रोसेसिंग",
+        "extractingText": "टेक्स्ट और राशियां निकाली जा रही हैं",
+        "tapToCapture": "कैप्चर करने के लिए टैप करें",
+        "aiReading": "AI पढ़ रहा है..."
     },
     "review": {
         "title": "निकाला गया डेटा देखें",
@@ -79,15 +86,28 @@
         "items": "सामान",
         "total": "कुल",
         "edit": "एडिट करें",
-        "confirmSave": "पुष्टि करें और सहेजें"
+        "confirmSave": "पुष्टि करें और सहेजें",
+        "confidence": "विश्वास",
+        "high": "उच्च",
+        "medium": "मध्यम",
+        "low": "कम",
+        "saveTransaction": "लेन-देन सहेजें",
+        "customerName": "ग्राहक का नाम",
+        "itemName": "वस्तु का नाम",
+        "price": "मूल्य",
+        "transactionType": "लेन-देन का प्रकार",
+        "cash": "नकद",
+        "credit": "क्रेडिट"
     },
     "settings": {
         "title": "सेटिंग्स",
         "businessProfile": "व्यापार प्रोफ़ाइल",
+        "myBusiness": "मेरा व्यापार",
         "language": "भाषा",
-        "subscription": "सब्सक्रिप्शन और बिलिंग",
-        "help": "मदद / सहायता",
-        "logout": "लॉग आउट"
+        "subscription": "सब्सक्रिप्शन",
+        "help": "मदद",
+        "logout": "लॉग आउट",
+        "freePlan": "मुफ्त प्लान"
     },
     "tabs": {
         "home": "होम",
@@ -106,6 +126,41 @@
         "udhar": "उधार",
         "purchase": "खरीद",
         "today": "आज",
-        "yesterday": "कल"
+        "yesterday": "कल",
+        "tryAgain": "फिर से कोशिश करें",
+        "enterManually": "मैन्युअल रूप से दर्ज करें",
+        "success": "सफलता",
+        "error": "त्रुटि"
+    },
+    "errors": {
+        "noInternet": "इंटरनेट कनेक्शन नहीं",
+        "noInternetMessage": "कृपया अपना WiFi या मोबाइल डेटा जांचें।",
+        "aiBusy": "AI व्यस्त",
+        "aiBusyMessage": "हमारा AI अभी व्यस्त है। कृपया एक मिनट में फिर से कोशिश करें।",
+        "serverError": "सर्वर त्रुटि",
+        "serverErrorMessage": "हमारी तरफ से कुछ गलत हो गया। कृपया फिर से कोशिश करें।",
+        "somethingWrong": "कुछ गलत हो गया",
+        "somethingWrongMessage": "कृपया फिर से कोशिश करें।",
+        "permissionRequired": "अनुमति आवश्यक",
+        "galleryPermissionMessage": "फोटो चुनने के लिए कृपया गैलरी अनुमति दें।",
+        "imageError": "चित्र त्रुटि",
+        "imageErrorMessage": "इस चित्र को प्रोसेस नहीं किया जा सका। कृपया दूसरा चित्र आजमाएं।",
+        "cameraError": "कैमरा त्रुटि",
+        "cameraErrorMessage": "फोटो कैप्चर करने में विफल। कृपया फिर से कोशिश करें।"
+    },
+    "permissions": {
+        "cameraTitle": "कैमरा अनुमति",
+        "cameraMessage": "हमें कैमरा दिखाने के लिए आपकी अनुमति की आवश्यकता है",
+        "grantPermission": "अनुमति प्रदान करें"
+    },
+    "editTransaction": {
+        "title": "लेन-देन संपादित करें",
+        "updated": "लेन-देन सफलतापूर्वक अपडेट किया गया",
+        "deleted": "लेन-देन सफलतापूर्वक हटा दिया गया",
+        "updateFailed": "लेन-देन अपडेट करने में विफल",
+        "deleteFailed": "लेन-देन हटाने में विफल",
+        "requiredFields": "ग्राहक का नाम और राशि आवश्यक है",
+        "deleteConfirm": "लेन-देन हटाएं",
+        "deleteWarning": "क्या आप वाकई इस लेन-देन को हटाना चाहते हैं? यह क्रिया पूर्ववत नहीं की जा सकती।"
     }
 }

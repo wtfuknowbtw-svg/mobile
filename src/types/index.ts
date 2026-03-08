@@ -77,6 +77,7 @@ export type RootStackParamList = {
     ReviewOCR: { receiptData?: any; imageUrl?: string; transcript?: string };
     ManualEntry: undefined;
     CustomerDetail: { customerId: string; customerName?: string };
+    EditTransaction: { transaction: Transaction };
 };
 
 export type MainTabParamList = {

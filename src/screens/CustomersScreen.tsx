@@ -16,6 +16,7 @@ import { useAppStore } from '../store/useAppStore';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getCustomers, createCustomer } from '../api/customers';
 import type { Customer } from '../types';
+import i18n from '../i18n';
 
 interface CustomersScreenProps {
     navigation: any;
@@ -107,7 +108,7 @@ export default function CustomersScreen({ navigation }: CustomersScreenProps) {
                     {customer.name}
                 </Text>
                 <Text style={{ fontSize: 12, color: COLORS.textMuted, marginTop: 2 }}>
-                    {customer.phone || 'No phone'}
+                    {customer.phone || i18n.t('customers.noPhone')}
                 </Text>
             </View>
 
@@ -118,7 +119,7 @@ export default function CustomersScreen({ navigation }: CustomersScreenProps) {
                         +{formatCurrency(customer.totalUdhar)}
                     </Text>
                     <Text style={{ fontSize: 11, color: COLORS.danger, marginTop: 2 }}>
-                        owed
+                        {i18n.t('customers.owed')}
                     </Text>
                 </View>
             ) : (
@@ -156,7 +157,7 @@ export default function CustomersScreen({ navigation }: CustomersScreenProps) {
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                     <Text style={{ fontSize: 16, marginRight: 8 }}>👥</Text>
                     <Text style={{ fontSize: 22, fontWeight: '800', color: COLORS.text }}>
-                        Customers
+                        {i18n.t('customers.title')}
                     </Text>
                 </View>
                 <TouchableOpacity
@@ -193,7 +194,7 @@ export default function CustomersScreen({ navigation }: CustomersScreenProps) {
                     <TextInput
                         value={search}
                         onChangeText={setSearch}
-                        placeholder="Search customer..."
+                        placeholder={i18n.t('customers.search')}
                         placeholderTextColor={COLORS.textMuted}
                         style={{
                             flex: 1,
@@ -240,7 +241,7 @@ export default function CustomersScreen({ navigation }: CustomersScreenProps) {
                                 marginBottom: 12,
                             }}
                         >
-                            UDHAR (CREDIT) · {udharCustomers.length} CUSTOMERS
+                            {i18n.t('customers.udhar')} · {udharCustomers.length} {i18n.t('customers.all')}
                         </Text>
                         {udharCustomers.map((c) => renderCustomerRow(c, true))}
                     </>
@@ -259,7 +260,7 @@ export default function CustomersScreen({ navigation }: CustomersScreenProps) {
                                 marginBottom: 12,
                             }}
                         >
-                            ALL CUSTOMERS · {regularCustomers.length}
+                            {i18n.t('customers.all')} · {regularCustomers.length}
                         </Text>
                         {regularCustomers.map((c) => renderCustomerRow(c, false))}
                     </>

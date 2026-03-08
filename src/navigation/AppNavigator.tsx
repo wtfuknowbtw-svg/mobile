@@ -5,6 +5,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { View, Text, Platform } from 'react-native';
 import { COLORS } from '../constants';
 import type { RootStackParamList, MainTabParamList } from '../types';
+import i18n from '../i18n';
 
 // Screens
 import SplashScreen from '../screens/SplashScreen';
@@ -19,9 +20,26 @@ import CameraScanScreen from '../screens/CameraScanScreen';
 import ReviewOCRScreen from '../screens/ReviewOCRScreen';
 import ManualEntryScreen from '../screens/ManualEntryScreen';
 import CustomerDetailScreen from '../screens/CustomerDetailScreen';
+import EditTransactionScreen from '../screens/EditTransactionScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
-const Tab = createBottomTabNavigator<MainTabParamList>();
+const MainTab = createBottomTabNavigator<MainTabParamList>();
+
+/** Get translated tab label */
+function getTabLabel(routeName: string) {
+    switch (routeName) {
+        case 'Home':
+            return i18n.t('tabs.home');
+        case 'Customers':
+            return i18n.t('tabs.customers');
+        case 'Reports':
+            return i18n.t('tabs.reports');
+        case 'Settings':
+            return i18n.t('tabs.settings');
+        default:
+            return routeName;
+    }
+}
 
 /** Tab icon component */
 function TabIcon({ name, focused }: { name: string; focused: boolean }) {
@@ -53,7 +71,7 @@ function TabIcon({ name, focused }: { name: string; focused: boolean }) {
 /** Main tab navigator */
 function MainTabs() {
     return (
-        <Tab.Navigator
+        <MainTab.Navigator
             screenOptions={({ route }) => ({
                 headerShown: false,
                 tabBarIcon: ({ focused }) => (
@@ -68,7 +86,7 @@ function MainTabs() {
                             marginTop: -2,
                         }}
                     >
-                        {route.name}
+                        {getTabLabel(route.name)}
                     </Text>
                 ),
                 tabBarStyle: {
@@ -86,11 +104,11 @@ function MainTabs() {
                 },
             })}
         >
-            <Tab.Screen name="Home" component={HomeScreen} />
-            <Tab.Screen name="Customers" component={CustomersScreen} />
-            <Tab.Screen name="Reports" component={ReportsScreen} />
-            <Tab.Screen name="Settings" component={SettingsScreen} />
-        </Tab.Navigator>
+            <MainTab.Screen name="Home" component={HomeScreen} />
+            <MainTab.Screen name="Customers" component={CustomersScreen} />
+            <MainTab.Screen name="Reports" component={ReportsScreen} />
+            <MainTab.Screen name="Settings" component={SettingsScreen} />
+        </MainTab.Navigator>
     );
 }
 
@@ -136,6 +154,7 @@ export default function AppNavigator() {
                     options={{ animation: 'slide_from_bottom' }}
                 />
                 <Stack.Screen name="CustomerDetail" component={CustomerDetailScreen} />
+                <Stack.Screen name="EditTransaction" component={EditTransactionScreen} />
             </Stack.Navigator>
         </NavigationContainer>
     );

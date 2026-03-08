@@ -30,11 +30,12 @@
   },
   "customers": {
     "title": "Customers",
-    "search": "Search customer...",
+    "search": "Search customer",
     "udhar": "UDHAR (CREDIT)",
     "all": "ALL CUSTOMERS",
     "owed": "owed",
-    "supplier": "SUPPLIER"
+    "supplier": "SUPPLIER",
+    "noPhone": "No phone"
   },
   "reports": {
     "title": "Reports",
@@ -61,12 +62,18 @@
   },
   "camera": {
     "scanTitle": "Scan Paper / Register",
-    "hint": "Point at paper register",
+    "documentScanner": "Document Scanner",
+    "positionDocument": "Position document within frame",
+    "alignDocument": "Align document within frame",
     "hintSub": "Make sure text is readable",
     "gallery": "Gallery",
     "flash": "Flash",
     "tipHold": "Tip: Hold steady",
-    "autoCrop": "Auto-crop"
+    "autoCrop": "Auto-crop",
+    "aiProcessing": "AI Processing",
+    "extractingText": "Extracting text and amounts",
+    "tapToCapture": "Tap to capture",
+    "aiReading": "AI is reading..."
   },
   "review": {
     "title": "Review Extracted Data",
@@ -79,15 +86,28 @@
     "items": "Items",
     "total": "Total",
     "edit": "Edit",
-    "confirmSave": "Confirm & Save"
+    "confirmSave": "Confirm & Save",
+    "confidence": "Confidence",
+    "high": "High",
+    "medium": "Medium",
+    "low": "Low",
+    "saveTransaction": "Save Transaction",
+    "customerName": "Customer Name",
+    "itemName": "Item Name",
+    "price": "Price",
+    "transactionType": "Transaction Type",
+    "cash": "Cash",
+    "credit": "Credit"
   },
   "settings": {
     "title": "Settings",
     "businessProfile": "Business Profile",
+    "myBusiness": "My Business",
     "language": "Language",
     "subscription": "Subscription & Billing",
     "help": "Help / Support",
-    "logout": "Logout"
+    "logout": "Logout",
+    "freePlan": "Free Plan"
   },
   "tabs": {
     "home": "Home",
@@ -106,6 +126,41 @@
     "udhar": "UDHAR",
     "purchase": "PURCHASE",
     "today": "Today",
-    "yesterday": "Yesterday"
+    "yesterday": "Yesterday",
+    "tryAgain": "Try Again",
+    "enterManually": "Enter Manually",
+    "success": "Success",
+    "error": "Error"
+  },
+  "errors": {
+    "noInternet": "No Internet Connection",
+    "noInternetMessage": "Please check your WiFi or mobile data.",
+    "aiBusy": "AI Busy",
+    "aiBusyMessage": "Our AI is busy right now. Please try again in a minute.",
+    "serverError": "Server Error",
+    "serverErrorMessage": "Something went wrong on our end. Please try again.",
+    "somethingWrong": "Something went wrong",
+    "somethingWrongMessage": "Please try again.",
+    "permissionRequired": "Permission Required",
+    "galleryPermissionMessage": "Please grant gallery permission to select photos.",
+    "imageError": "Image Error",
+    "imageErrorMessage": "Could not process this image. Please try another one.",
+    "cameraError": "Camera Error",
+    "cameraErrorMessage": "Failed to capture photo. Please try again."
+  },
+  "permissions": {
+    "cameraTitle": "Camera Permission",
+    "cameraMessage": "We need your permission to show the camera",
+    "grantPermission": "Grant Permission"
+  },
+  "editTransaction": {
+    "title": "Edit Transaction",
+    "updated": "Transaction updated successfully",
+    "deleted": "Transaction deleted successfully",
+    "updateFailed": "Failed to update transaction",
+    "deleteFailed": "Failed to delete transaction",
+    "requiredFields": "Customer name and amount are required",
+    "deleteConfirm": "Delete Transaction",
+    "deleteWarning": "Are you sure you want to delete this transaction? This action cannot be undone."
   }
 }
