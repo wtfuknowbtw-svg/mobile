@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
     View,
     Text,
@@ -6,6 +6,7 @@ import {
     StatusBar,
     ActivityIndicator,
     Alert,
+    Animated,
 } from 'react-native';
 import { COLORS } from '../constants';
 import { CameraView, useCameraPermissions } from 'expo-camera';
@@ -21,6 +22,9 @@ export default function CameraScanScreen({ navigation }: CameraScanScreenProps) 
     const [cameraRef, setCameraRef] = useState<CameraView | null>(null);
     const [flashOn, setFlashOn] = useState<'off' | 'on'>('off');
     const [isProcessing, setIsProcessing] = useState(false);
+    const [showFlash, setShowFlash] = useState(false);
+    const [capturedImage, setCapturedImage] = useState<string | null>(null);
+    const flashOpacity = useRef(new Animated.Value(0)).current;
 
     // Request gallery permissions on mount
     React.useEffect(() => {
@@ -31,6 +35,20 @@ export default function CameraScanScreen({ navigation }: CameraScanScreenProps) 
             }
         })();
     }, []);
+
+    const triggerFlashEffect = () => {
+        setShowFlash(true);
+        flashOpacity.setValue(1);
+        
+        // Fade out flash
+        Animated.timing(flashOpacity, {
+            toValue: 0,
+            duration: 300,
+            useNativeDriver: true,
+        }).start(() => {
+            setShowFlash(false);
+        });
+    };
 
     if (!permission) {
         // Camera permissions are still loading.
@@ -57,7 +75,6 @@ export default function CameraScanScreen({ navigation }: CameraScanScreenProps) 
     const handleCapture = async () => {
         if (!cameraRef || isProcessing) return;
 
-        setIsProcessing(true);
         try {
             console.log('Taking picture...');
             const photo = await cameraRef.takePictureAsync({
@@ -68,16 +85,31 @@ export default function CameraScanScreen({ navigation }: CameraScanScreenProps) 
 
             console.log('Photo taken, base64 length:', photo.base64?.length || 0);
 
-            if (photo?.base64) {
-                await processImageOCR(photo.base64, photo.uri || '');
+            if (photo && photo.base64) {
+                // Store photo data for setTimeout callback
+                const photoBase64 = photo.base64;
+                const photoUri = photo.uri || '';
+                
+                // Trigger camera effects
+                triggerFlashEffect();
+                
+                // Show captured image for 1 second
+                setCapturedImage(photoUri);
+                
+                // Wait 1 second to show the captured image
+                setTimeout(() => {
+                    setCapturedImage(null);
+                    setIsProcessing(true);
+                    
+                    // Process the image
+                    processImageOCR(photoBase64, photoUri);
+                }, 1000);
             } else {
                 Alert.alert("Error", "Failed to capture photo. Please try again.");
             }
         } catch (error) {
             console.error("Camera error:", error);
             Alert.alert("Camera Error", `Failed to capture photo: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`);
-        } finally {
-            setIsProcessing(false);
         }
     };
 
@@ -96,7 +128,6 @@ export default function CameraScanScreen({ navigation }: CameraScanScreenProps) 
                 aspect: [4, 3],
                 quality: 0.8,
                 base64: true,
-                presentationStyle: 'pageSheet',
             });
 
             if (!result.canceled && result.assets && result.assets.length > 0) {
@@ -140,6 +171,8 @@ export default function CameraScanScreen({ navigation }: CameraScanScreenProps) 
         } catch (error) {
             console.error('Processing Error:', error);
             Alert.alert("Processing Error", `Failed to process the image: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`);
+        } finally {
+            setIsProcessing(false);
         }
     };
 
@@ -221,6 +254,47 @@ export default function CameraScanScreen({ navigation }: CameraScanScreenProps) 
                         </View>
                     )}
                 </CameraView>
+                
+                {/* Flash Effect Overlay */}
+                {showFlash && (
+                    <Animated.View 
+                        style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            backgroundColor: '#ffffff',
+                            opacity: flashOpacity,
+                            zIndex: 10,
+                        }}
+                    />
+                )}
+                
+                {/* Captured Image Preview */}
+                {capturedImage && (
+                    <View style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundColor: '#000',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        zIndex: 5,
+                    }}>
+                        <Text style={{ 
+                            fontSize: 18, 
+                            color: COLORS.white, 
+                            fontWeight: '600',
+                            marginBottom: 20 
+                        }}>
+                            ✅ Photo Captured!
+                        </Text>
+                        <ActivityIndicator size="small" color={COLORS.success} />
+                    </View>
+                )}
             </View>
 
             {/* Tips */}
@@ -285,11 +359,11 @@ export default function CameraScanScreen({ navigation }: CameraScanScreenProps) 
                         letterSpacing: 1,
                     }}
                 >
-                    {isProcessing ? "🤖 AI Processing..." : "📸 Capture Document"}
+                    {capturedImage ? "📸 Captured!" : isProcessing ? "🤖 Processing..." : "📸 Tap to capture"}
                 </Text>
                 <TouchableOpacity
                     onPress={handleCapture}
-                    disabled={isProcessing}
+                    disabled={isProcessing || capturedImage !== null}
                     activeOpacity={0.85}
                     style={{
                         width: 72,
@@ -306,12 +380,12 @@ export default function CameraScanScreen({ navigation }: CameraScanScreenProps) 
                             width: 56,
                             height: 56,
                             borderRadius: 28,
-                            backgroundColor: isProcessing ? COLORS.border : COLORS.success,
+                            backgroundColor: capturedImage || isProcessing ? COLORS.border : COLORS.success,
                             justifyContent: 'center',
                             alignItems: 'center',
                         }}
                     >
-                        {isProcessing && <ActivityIndicator color={COLORS.white} />}
+                        {(isProcessing || capturedImage) && <ActivityIndicator color={COLORS.white} />}
                     </View>
                 </TouchableOpacity>
             </View>
