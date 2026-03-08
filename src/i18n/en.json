@@ -162,5 +162,9 @@
     "requiredFields": "Customer name and amount are required",
     "deleteConfirm": "Delete Transaction",
     "deleteWarning": "Are you sure you want to delete this transaction? This action cannot be undone."
+  },
+  "manualEntry": {
+    "correctData": "Correct Data",
+    "phoneNumber": "Phone Number"
   }
 }

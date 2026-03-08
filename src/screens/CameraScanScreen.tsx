@@ -284,25 +284,38 @@ export default function CameraScanScreen({ navigation }: CameraScanScreenProps) 
             console.log('🎯 OCR Result from processOCR:', result);
             console.log('🎯 OCR Result Data:', result.data);
             console.log('🎯 OCR Result Error:', result.error);
-            console.log('🎯 OCR Data Length:', result.data?.length);
 
             if (result.error) {
                 throw new Error(result.error);
             }
 
-            if (result.data && result.data.length > 0) {
-                const transactionData = result.data[0];
+            if (result.data) {
+                const transactionData = result.data;
                 console.log('✅ OCR Success! Transaction Data:', transactionData);
                 console.log('✅ Transaction Fields:', Object.keys(transactionData || {}));
                 console.log('✅ Customer Name:', transactionData.customerName);
                 console.log('✅ Item Name:', transactionData.itemName);
                 console.log('✅ Price:', transactionData.price);
                 console.log('✅ Type:', transactionData.type);
+                console.log('✅ Confidence:', transactionData.confidence || 'undefined');
                 
-                navigation.navigate('ReviewOCR', {
-                    receiptData: transactionData,
-                    imageUrl: uri
-                });
+                // Check confidence level
+                if ((transactionData.confidence || 0) < 40) {
+                    console.log('⚠️ Low confidence detected, navigating to ManualEntry with pre-filled data');
+                    navigation.navigate('ManualEntry', {
+                        prefilledData: {
+                            customerName: transactionData.customerName || '',
+                            itemName: transactionData.itemName || '',
+                            price: transactionData.price || 0,
+                            type: transactionData.type || 'credit'
+                        }
+                    });
+                } else {
+                    navigation.navigate('ReviewOCR', {
+                        receiptData: transactionData,
+                        imageUrl: uri
+                    });
+                }
             } else {
                 throw new Error("Could not extract transaction data from this image. Please try a clearer photo with better lighting.");
             }

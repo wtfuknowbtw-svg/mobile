@@ -71,9 +71,9 @@ export default function VoiceInputScreen({ navigation }: VoiceInputScreenProps) 
     const handleProcessVoice = async (text: string) => {
         try {
             const result = await processOCR({ transcript: text });
-            if (result.data && result.data.length > 0) {
+            if (result.data) {
                 navigation.navigate('ReviewOCR', {
-                    receiptData: result.data[0],
+                    receiptData: result.data,
                     transcript: text
                 });
             } else {

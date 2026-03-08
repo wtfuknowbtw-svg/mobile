@@ -29,6 +29,7 @@ export interface Transaction {
     businessId: string;
     customerId?: string;
     customerName?: string;
+    customerPhone?: string;
     itemName?: string;
     quantity?: number;
     unit?: string;
@@ -36,6 +37,7 @@ export interface Transaction {
     type: TransactionType;
     date: string;
     aiConfidence?: number;
+    confidence?: number; // For OCR response compatibility
     sourceType?: SourceType;
     sourceImageUrl?: string;
     rawText?: string;
@@ -75,7 +77,7 @@ export type RootStackParamList = {
     VoiceInput: undefined;
     CameraScan: undefined;
     ReviewOCR: { receiptData?: any; imageUrl?: string; transcript?: string };
-    ManualEntry: undefined;
+    ManualEntry: { prefilledData?: { customerName: string; itemName: string; price: number; type: 'cash' | 'credit' | 'expense' } };
     CustomerDetail: { customerId: string; customerName?: string };
     EditTransaction: { transaction: Transaction };
 };
