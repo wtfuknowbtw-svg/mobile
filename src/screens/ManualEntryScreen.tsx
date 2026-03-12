@@ -10,6 +10,7 @@ import {
     Platform,
     ActivityIndicator,
     Alert,
+    Modal,
 } from 'react-native';
 import * as Contacts from 'expo-contacts';
 import { COLORS } from '../constants';

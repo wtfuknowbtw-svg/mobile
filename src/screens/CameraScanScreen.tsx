@@ -196,9 +196,8 @@ export default function CameraScanScreen({ navigation }: CameraScanScreenProps) 
                 skipProcessing: false,
             });
 
-            console.log('Photo taken, base64 length:', photo.base64?.length || 0);
-
             if (photo && photo.base64) {
+                console.log('Photo taken, base64 length:', photo.base64.length);
                 // Store photo data for setTimeout callback
                 const photoBase64 = photo.base64;
                 const photoUri = photo.uri || '';
@@ -284,13 +283,14 @@ export default function CameraScanScreen({ navigation }: CameraScanScreenProps) 
             console.log('🎯 OCR Result from processOCR:', result);
             console.log('🎯 OCR Result Data:', result.data);
             console.log('🎯 OCR Result Error:', result.error);
+            console.log('🎯 OCR Data Length:', result.data?.length);
 
             if (result.error) {
                 throw new Error(result.error);
             }
 
-            if (result.data) {
-                const transactionData = result.data;
+            if (result.data && result.data.length > 0) {
+                const transactionData = result.data[0];
                 console.log('✅ OCR Success! Transaction Data:', transactionData);
                 console.log('✅ Transaction Fields:', Object.keys(transactionData || {}));
                 console.log('✅ Customer Name:', transactionData.customerName);

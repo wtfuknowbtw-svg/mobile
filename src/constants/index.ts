@@ -6,6 +6,8 @@ export const COLORS = {
     successLight: '#ECFDF5',
     danger: '#E02424',
     dangerLight: '#FEF2F2',
+    warning: '#D97706',
+    warningLight: '#FFFBEB',
     purchase: '#1A56DB',
     purchaseLight: '#EBF0FB',
     background: '#F9FAFB',
@@ -25,7 +27,7 @@ export const FONTS = {
     bold: 'System',
 } as const;
 
-export const API_BASE_URL = __DEV__
+export const API_BASE_URL = process.env.NODE_ENV === 'development'
     // Using production backend for testing
     ? 'https://apnabackend-theta.vercel.app/api'
     : 'https://apnabackend-theta.vercel.app/api';

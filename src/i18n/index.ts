@@ -1,6 +1,8 @@
 import { I18n } from 'i18n-js';
-import en from './en.json';
-import hi from './hi.json';
+
+// Import JSON files dynamically to avoid TypeScript issues
+const en = require('./en.json');
+const hi = require('./hi.json');
 
 const i18n = new I18n({ en, hi });
 

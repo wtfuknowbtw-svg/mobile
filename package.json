@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "1.23.1",
+    "@react-native-voice/voice": "^3.2.4",
     "@react-navigation/bottom-tabs": "^7.15.5",
     "@react-navigation/native": "^7.1.33",
     "@react-navigation/native-stack": "^7.14.4",
@@ -24,6 +25,7 @@
     "expo-image-picker": "~16.0.6",
     "expo-localization": "~16.0.1",
     "expo-speech": "~13.0.1",
+    "expo-speech-recognition": "^3.1.1",
     "expo-status-bar": "~2.0.1",
     "i18n-js": "^4.4.3",
     "make-plural": "^8.1.0",
@@ -41,8 +43,8 @@
     "zustand": "^5.0.11"
   },
   "devDependencies": {
-    "@expo/metro-runtime": "~4.0.0",
-    "@types/react": "~18.3.12",
+    "@expo/metro-runtime": "~3.2.1",
+    "@types/react": "~18.2.45",
     "typescript": "~5.3.3"
   },
   "private": true

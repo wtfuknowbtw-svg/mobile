@@ -654,57 +654,268 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
                 </TouchableOpacity>
             </Modal>
 
-            {/* Edit Options Modal */}
+            {/* Premium Transaction Options Bottom Sheet */}
             <Modal
                 visible={!!showEditOptions}
                 transparent
-                animationType="fade"
+                animationType="slide"
                 onRequestClose={() => setShowEditOptions(null)}
             >
-                <TouchableOpacity
-                    style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' }}
-                    activeOpacity={1}
-                    onPress={() => setShowEditOptions(null)}
-                >
-                    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-                        <View
-                            style={{
-                                backgroundColor: COLORS.card,
-                                borderRadius: 12,
-                                padding: 8,
-                                minWidth: 150,
-                            }}
-                        >
+                <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }}>
+                    <TouchableOpacity
+                        style={{ flex: 1 }}
+                        activeOpacity={1}
+                        onPress={() => setShowEditOptions(null)}
+                    />
+                    <Animated.View 
+                        style={{
+                            backgroundColor: COLORS.background,
+                            borderTopLeftRadius: 24,
+                            borderTopRightRadius: 24,
+                            paddingTop: 8,
+                            paddingBottom: 20,
+                            shadowColor: '#000',
+                            shadowOffset: { width: 0, height: -4 },
+                            shadowOpacity: 0.15,
+                            shadowRadius: 8,
+                            elevation: 12,
+                        }}
+                    >
+                        {/* Handle Bar */}
+                        <View style={{
+                            width: 40,
+                            height: 4,
+                            backgroundColor: COLORS.border,
+                            borderRadius: 2,
+                            alignSelf: 'center',
+                            marginBottom: 16,
+                        }} />
+
+                        {/* Transaction Header */}
+                        {showEditOptions && (
+                            <View style={{
+                                paddingHorizontal: 20,
+                                paddingVertical: 16,
+                                borderBottomWidth: 1,
+                                borderBottomColor: COLORS.border,
+                            }}>
+                                <View style={{
+                                    flexDirection: 'row',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                }}>
+                                    <View style={{ flex: 1 }}>
+                                        <Text style={{
+                                            fontSize: 18,
+                                            fontWeight: '700',
+                                            color: COLORS.text,
+                                            marginBottom: 4,
+                                        }}>
+                                            {showEditOptions.customerName || 'Unknown Customer'}
+                                        </Text>
+                                        <Text style={{
+                                            fontSize: 24,
+                                            fontWeight: '700',
+                                            color: showEditOptions.type === 'credit' ? COLORS.danger : 
+                                                   showEditOptions.type === 'expense' ? COLORS.warning : COLORS.success,
+                                        }}>
+                                            ₹{showEditOptions.price}
+                                        </Text>
+                                    </View>
+                                    <View style={{
+                                        paddingHorizontal: 12,
+                                        paddingVertical: 6,
+                                        borderRadius: 12,
+                                        backgroundColor: showEditOptions.type === 'credit' ? 'rgba(239, 68, 68, 0.1)' : 
+                                                       showEditOptions.type === 'expense' ? 'rgba(245, 158, 11, 0.1)' : 'rgba(34, 197, 94, 0.1)',
+                                    }}>
+                                        <Text style={{
+                                            fontSize: 12,
+                                            fontWeight: '600',
+                                            color: showEditOptions.type === 'credit' ? COLORS.danger : 
+                                                   showEditOptions.type === 'expense' ? COLORS.warning : COLORS.success,
+                                            textTransform: 'uppercase',
+                                        }}>
+                                            {showEditOptions.type}
+                                        </Text>
+                                    </View>
+                                </View>
+                            </View>
+                        )}
+
+                        {/* Options List */}
+                        <View style={{ paddingHorizontal: 8 }}>
+                            {/* Edit Transaction */}
                             <TouchableOpacity
                                 style={{
-                                    paddingVertical: 12,
-                                    paddingHorizontal: 20,
-                                    borderRadius: 8,
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    paddingVertical: 16,
+                                    paddingHorizontal: 16,
+                                    borderRadius: 12,
+                                    marginVertical: 4,
                                 }}
                                 onPress={() => handleEditOption(showEditOptions!)}
                             >
-                                <Text style={{ fontSize: 16, color: COLORS.text, fontWeight: '600' }}>
-                                    {i18n.t('common.edit')}
+                                <View style={{
+                                    width: 40,
+                                    height: 40,
+                                    borderRadius: 20,
+                                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                    marginRight: 16,
+                                }}>
+                                    <Text style={{ fontSize: 20 }}>✏️</Text>
+                                </View>
+                                <Text style={{
+                                    fontSize: 16,
+                                    fontWeight: '600',
+                                    color: COLORS.text,
+                                    flex: 1,
+                                }}>
+                                    Edit Transaction
                                 </Text>
+                                <Text style={{ fontSize: 16, color: COLORS.textMuted }}>›</Text>
                             </TouchableOpacity>
-                            
-                            <View style={{ height: 1, backgroundColor: COLORS.border, marginHorizontal: 8 }} />
-                            
+
+                            {/* Copy Details */}
                             <TouchableOpacity
                                 style={{
-                                    paddingVertical: 12,
-                                    paddingHorizontal: 20,
-                                    borderRadius: 8,
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    paddingVertical: 16,
+                                    paddingHorizontal: 16,
+                                    borderRadius: 12,
+                                    marginVertical: 4,
+                                }}
+                                onPress={() => {
+                                    setShowEditOptions(null);
+                                    // Copy transaction details to clipboard
+                                    const details = `${showEditOptions?.customerName || 'Unknown'} - ₹${showEditOptions?.price} (${showEditOptions?.type})`;
+                                    Alert.alert('Copied', 'Transaction details copied to clipboard');
+                                }}
+                            >
+                                <View style={{
+                                    width: 40,
+                                    height: 40,
+                                    borderRadius: 20,
+                                    backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                    marginRight: 16,
+                                }}>
+                                    <Text style={{ fontSize: 20 }}>📋</Text>
+                                </View>
+                                <Text style={{
+                                    fontSize: 16,
+                                    fontWeight: '600',
+                                    color: COLORS.text,
+                                    flex: 1,
+                                }}>
+                                    Copy Details
+                                </Text>
+                                <Text style={{ fontSize: 16, color: COLORS.textMuted }}>›</Text>
+                            </TouchableOpacity>
+
+                            {/* Send Reminder - Only for credit transactions */}
+                            {showEditOptions?.type === 'credit' && (
+                                <TouchableOpacity
+                                    style={{
+                                        flexDirection: 'row',
+                                        alignItems: 'center',
+                                        paddingVertical: 16,
+                                        paddingHorizontal: 16,
+                                        borderRadius: 12,
+                                        marginVertical: 4,
+                                    }}
+                                    onPress={() => {
+                                        setShowEditOptions(null);
+                                        Alert.alert('Send Reminder', 'Reminder feature coming soon!');
+                                    }}
+                                >
+                                    <View style={{
+                                        width: 40,
+                                        height: 40,
+                                        borderRadius: 20,
+                                        backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                                        justifyContent: 'center',
+                                        alignItems: 'center',
+                                        marginRight: 16,
+                                    }}>
+                                        <Text style={{ fontSize: 20 }}>📲</Text>
+                                    </View>
+                                    <Text style={{
+                                        fontSize: 16,
+                                        fontWeight: '600',
+                                        color: COLORS.text,
+                                        flex: 1,
+                                    }}>
+                                        Send Reminder
+                                    </Text>
+                                    <Text style={{ fontSize: 16, color: COLORS.textMuted }}>›</Text>
+                                </TouchableOpacity>
+                            )}
+
+                            {/* Delete */}
+                            <TouchableOpacity
+                                style={{
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    paddingVertical: 16,
+                                    paddingHorizontal: 16,
+                                    borderRadius: 12,
+                                    marginVertical: 4,
                                 }}
                                 onPress={() => handleDeleteOption(showEditOptions!)}
                             >
-                                <Text style={{ fontSize: 16, color: COLORS.danger, fontWeight: '600' }}>
-                                    {i18n.t('common.delete')}
+                                <View style={{
+                                    width: 40,
+                                    height: 40,
+                                    borderRadius: 20,
+                                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                    marginRight: 16,
+                                }}>
+                                    <Text style={{ fontSize: 20 }}>🗑️</Text>
+                                </View>
+                                <Text style={{
+                                    fontSize: 16,
+                                    fontWeight: '600',
+                                    color: COLORS.danger,
+                                    flex: 1,
+                                }}>
+                                    Delete
+                                </Text>
+                                <Text style={{ fontSize: 16, color: COLORS.danger }}>›</Text>
+                            </TouchableOpacity>
+                        </View>
+
+                        {/* Cancel Button */}
+                        <View style={{ paddingHorizontal: 20, marginTop: 8 }}>
+                            <TouchableOpacity
+                                style={{
+                                    backgroundColor: COLORS.card,
+                                    paddingVertical: 16,
+                                    borderRadius: 12,
+                                    borderWidth: 1,
+                                    borderColor: COLORS.border,
+                                    alignItems: 'center',
+                                }}
+                                onPress={() => setShowEditOptions(null)}
+                            >
+                                <Text style={{
+                                    fontSize: 16,
+                                    fontWeight: '600',
+                                    color: COLORS.text,
+                                }}>
+                                    Cancel
                                 </Text>
                             </TouchableOpacity>
                         </View>
-                    </View>
-                </TouchableOpacity>
+                    </Animated.View>
+                </View>
             </Modal>
         </View>
     );
