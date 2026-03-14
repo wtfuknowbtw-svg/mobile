@@ -21,6 +21,8 @@ import ReviewOCRScreen from '../screens/ReviewOCRScreen';
 import ManualEntryScreen from '../screens/ManualEntryScreen';
 import CustomerDetailScreen from '../screens/CustomerDetailScreen';
 import EditTransactionScreen from '../screens/EditTransactionScreen';
+import UdharPaymentScreen from '../screens/UdharPaymentScreen';
+import BusinessProfileScreen from '../screens/BusinessProfileScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const MainTab = createBottomTabNavigator<MainTabParamList>();
@@ -155,6 +157,8 @@ export default function AppNavigator() {
                 />
                 <Stack.Screen name="CustomerDetail" component={CustomerDetailScreen} />
                 <Stack.Screen name="EditTransaction" component={EditTransactionScreen} />
+                <Stack.Screen name="UdharPayment" component={UdharPaymentScreen} />
+                <Stack.Screen name="BusinessProfile" component={BusinessProfileScreen} />
             </Stack.Navigator>
         </NavigationContainer>
     );

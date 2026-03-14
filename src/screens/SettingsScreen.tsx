@@ -52,7 +52,7 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
             icon: '🏪',
             label: i18n.t('settings.businessProfile'),
             subtitle: 'Name, type, GSTIN',
-            action: () => Alert.alert('Coming Soon', 'Business profile editing will be available soon.'),
+            action: () => navigation.navigate('BusinessProfile'),
         },
         {
             icon: '🌐',

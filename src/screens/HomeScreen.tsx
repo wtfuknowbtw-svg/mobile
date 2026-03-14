@@ -30,7 +30,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
     const [showAddSheet, setShowAddSheet] = useState(false);
     const [selectedTxn, setSelectedTxn] = useState<Transaction | null>(null);
     const [showTxnDetails, setShowTxnDetails] = useState(false);
-    const [showEditOptions, setShowEditOptions] = useState<string | null>(null);
+    const [showEditOptions, setShowEditOptions] = useState<Transaction | null>(null);
     const slideAnim = useRef(new Animated.Value(300)).current;
 
     const { data: txnsResponse, isLoading, refetch, isRefetching } = useQuery({
@@ -76,7 +76,6 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
             setShowTxnDetails(false);
             refetch(); // Refresh the list
         } catch (err) {
-            console.error('Delete error:', err);
             alert('Failed to delete transaction. Please try again.');
         }
     };
@@ -96,6 +95,31 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
 
     const formatCurrency = (amount: number) => `₹${amount.toLocaleString('en-IN')}`;
 
+    // Calculate outstanding udhar per customer
+    const customerUdharMap: Record<string, { name: string; totalUdhar: number; lastTransaction: Transaction | null }> = {};
+    recentTransactions.forEach((txn) => {
+        const name = txn.customerName || 'Unknown';
+        if (!customerUdharMap[name]) {
+            customerUdharMap[name] = { name, totalUdhar: 0, lastTransaction: null };
+        }
+        
+        if (txn.type === 'credit') {
+            customerUdharMap[name].totalUdhar += txn.price;
+        } else if (txn.type === 'cash' || txn.type === 'udhar_payment') {
+            customerUdharMap[name].totalUdhar -= txn.price;
+        }
+        
+        // Track most recent transaction
+        if (!customerUdharMap[name].lastTransaction || new Date(txn.date) > new Date(customerUdharMap[name].lastTransaction!.date)) {
+            customerUdharMap[name].lastTransaction = txn;
+        }
+    });
+
+    // Filter only customers with outstanding udhar > 0
+    const activeUdharCustomers = Object.values(customerUdharMap)
+        .filter(c => c.totalUdhar > 0)
+        .sort((a, b) => b.totalUdhar - a.totalUdhar); // Highest udhar first
+
     const formatDate = (dateStr: string) => {
         const txnDate = new Date(dateStr);
         const today = new Date();
@@ -111,15 +135,12 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
         }
     };
 
-    const handleEditOption = (transactionId: string) => {
-        const transaction = recentTransactions.find(t => t.id === transactionId);
-        if (transaction) {
-            navigation.navigate('EditTransaction', { transaction });
-            setShowEditOptions(null);
-        }
+    const handleEditOption = (transaction: Transaction) => {
+        navigation.navigate('EditTransaction', { transaction });
+        setShowEditOptions(null);
     };
 
-    const handleDeleteOption = (transactionId: string) => {
+    const handleDeleteOption = (transaction: Transaction) => {
         Alert.alert(
             i18n.t('editTransaction.deleteConfirm'),
             i18n.t('editTransaction.deleteWarning'),
@@ -130,12 +151,10 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
                     style: 'destructive',
                     onPress: async () => {
                         try {
-                            const { error } = await deleteTransaction(transactionId);
-                            if (error) throw new Error(error);
+                            await deleteTransaction(transaction.id);
                             refetch();
                         } catch (err) {
-                            console.error('Delete error:', err);
-                            alert(i18n.t('editTransaction.deleteFailed'));
+                            Alert.alert('Error', 'Failed to delete transaction');
                         }
                     },
                 },
@@ -274,7 +293,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
                 </View>
             </View>
 
-            {/* Recent Transactions */}
+            {/* Outstanding Udhar List */}
             <View style={{ paddingHorizontal: 20, marginBottom: 8 }}>
                 <Text
                     style={{
@@ -284,7 +303,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
                         letterSpacing: 1,
                     }}
                 >
-                    {i18n.t('home.recentTransactions')}
+                    OUTSTANDING UDHAR
                 </Text>
             </View>
 
@@ -302,22 +321,21 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
                     </View>
                 )}
 
-                {!isLoading && recentTransactions.length === 0 && (
+                {!isLoading && activeUdharCustomers.length === 0 && (
                     <View style={{ paddingVertical: 60, alignItems: 'center' }}>
-                        <Text style={{ fontSize: 48, marginBottom: 16 }}>📒</Text>
+                        <Text style={{ fontSize: 48, marginBottom: 16 }}>🎉</Text>
                         <Text style={{ fontSize: 16, fontWeight: '600', color: COLORS.text }}>
-                            No transactions yet
+                            No outstanding udhar
                         </Text>
                         <Text style={{ fontSize: 13, color: COLORS.textMuted, marginTop: 4, textAlign: 'center' }}>
-                            Tap the + button to add your first{'\n'}transaction via voice, camera, or manual entry
+                            All customers have paid their dues!{'\n'}Tap + to add new transactions
                         </Text>
                     </View>
                 )}
 
-                {recentTransactions.map((txn) => {
-                    const typeInfo = getTypeLabel(txn.type);
+                {activeUdharCustomers.map((customer) => {
                     return (
-                        <View key={txn.id} style={{
+                        <View key={customer.name} style={{
                             flexDirection: 'row',
                             alignItems: 'center',
                             paddingVertical: 14,
@@ -327,8 +345,10 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
                             <TouchableOpacity
                                 activeOpacity={0.7}
                                 onPress={() => {
-                                    setSelectedTxn(txn);
-                                    setShowTxnDetails(true);
+                                    if (customer.lastTransaction) {
+                                        setSelectedTxn(customer.lastTransaction);
+                                        setShowTxnDetails(true);
+                                    }
                                 }}
                                 style={{ flex: 1 }}
                             >
@@ -341,7 +361,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
                                                 color: COLORS.text,
                                             }}
                                         >
-                                            {txn.customerName || 'Unknown'}
+                                            {customer.name}
                                         </Text>
                                         <Text
                                             style={{
@@ -350,22 +370,22 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
                                                 marginTop: 2,
                                             }}
                                         >
-                                            {txn.itemName || 'Items'} · {formatDate(txn.date)}
+                                            Outstanding Udhar
                                         </Text>
                                     </View>
                                     <View style={{ alignItems: 'flex-end' }}>
                                         <Text
                                             style={{
-                                                fontSize: 16,
+                                                fontSize: 18,
                                                 fontWeight: '700',
-                                                color: COLORS.text,
+                                                color: COLORS.danger,
                                             }}
                                         >
-                                            {formatCurrency(txn.price)}
+                                            {formatCurrency(customer.totalUdhar)}
                                         </Text>
                                         <View
                                             style={{
-                                                backgroundColor: typeInfo.bg,
+                                                backgroundColor: COLORS.dangerLight,
                                                 paddingHorizontal: 8,
                                                 paddingVertical: 2,
                                                 borderRadius: 4,
@@ -376,10 +396,10 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
                                                 style={{
                                                     fontSize: 10,
                                                     fontWeight: '700',
-                                                    color: typeInfo.color,
+                                                    color: COLORS.danger,
                                                 }}
                                             >
-                                                {typeInfo.label}
+                                                UDHAR
                                             </Text>
                                         </View>
                                     </View>
@@ -388,7 +408,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
                             
                             {/* Edit/Delete Options */}
                             <TouchableOpacity
-                                onPress={() => setShowEditOptions(txn.id)}
+                                onPress={() => customer.lastTransaction && setShowEditOptions(customer.lastTransaction)}
                                 style={{
                                     padding: 8,
                                     marginLeft: 8,
@@ -399,6 +419,101 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
                         </View>
                     );
                 })}
+
+                {/* Recent Transactions Section */}
+                {recentTransactions.length > 0 && (
+                    <>
+                        <View style={{ paddingHorizontal: 20, marginTop: 24, marginBottom: 8 }}>
+                            <Text
+                                style={{
+                                    fontSize: 12,
+                                    fontWeight: '700',
+                                    color: COLORS.textMuted,
+                                    letterSpacing: 1,
+                                }}
+                            >
+                                RECENT TRANSACTIONS
+                            </Text>
+                        </View>
+
+                        {recentTransactions.slice(0, 10).map((txn) => {
+                            const typeInfo = getTypeLabel(txn.type);
+                            return (
+                                <View key={txn.id} style={{
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    paddingVertical: 12,
+                                    borderBottomWidth: 1,
+                                    borderBottomColor: COLORS.border,
+                                    opacity: 0.8,
+                                }}>
+                                    <TouchableOpacity
+                                        activeOpacity={0.7}
+                                        onPress={() => {
+                                            setSelectedTxn(txn);
+                                            setShowTxnDetails(true);
+                                        }}
+                                        style={{ flex: 1 }}
+                                    >
+                                        <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                                            <View style={{ flex: 1 }}>
+                                                <Text
+                                                    style={{
+                                                        fontSize: 15,
+                                                        fontWeight: '500',
+                                                        color: COLORS.text,
+                                                    }}
+                                                >
+                                                    {txn.customerName || 'Unknown'}
+                                                </Text>
+                                                <Text
+                                                    style={{
+                                                        fontSize: 12,
+                                                        color: COLORS.textMuted,
+                                                        marginTop: 1,
+                                                    }}
+                                                >
+                                                    {txn.itemName || 'Items'} · {formatDate(txn.date)}
+                                                </Text>
+                                            </View>
+                                            <View style={{ alignItems: 'flex-end' }}>
+                                                <Text
+                                                    style={{
+                                                        fontSize: 15,
+                                                        fontWeight: '600',
+                                                        color: COLORS.text,
+                                                    }}
+                                                >
+                                                    {formatCurrency(txn.price)}
+                                                </Text>
+                                                <View
+                                                    style={{
+                                                        backgroundColor: typeInfo.bg,
+                                                        paddingHorizontal: 6,
+                                                        paddingVertical: 1,
+                                                        borderRadius: 3,
+                                                        marginTop: 2,
+                                                    }}
+                                                >
+                                                    <Text
+                                                        style={{
+                                                            fontSize: 9,
+                                                            fontWeight: '700',
+                                                            color: typeInfo.color,
+                                                        }}
+                                                    >
+                                                        {typeInfo.label}
+                                                    </Text>
+                                                </View>
+                                            </View>
+                                        </View>
+                                    </TouchableOpacity>
+                                </View>
+                            );
+                        })}
+                    </>
+                )}
+
                 <View style={{ height: 80 }} />
             </ScrollView>
 
@@ -478,53 +593,115 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
                             {i18n.t('home.addTransaction')}
                         </Text>
 
-                        <View
-                            style={{
-                                flexDirection: 'row',
-                                justifyContent: 'space-around',
-                            }}
-                        >
-                            {[
-                                { icon: '📸', label: i18n.t('home.photo'), color: COLORS.success, screen: 'CameraScan' },
-                                { icon: '🎤', label: i18n.t('home.voice'), color: COLORS.danger, screen: 'VoiceInput' },
-                                { icon: '💬', label: i18n.t('home.whatsapp'), color: COLORS.success, screen: null },
-                                { icon: '✏️', label: i18n.t('home.manual'), color: COLORS.orange, screen: 'ManualEntry' },
-                            ].map((item) => (
-                                <TouchableOpacity
-                                    key={item.label}
-                                    activeOpacity={0.7}
-                                    onPress={() => {
-                                        closeSheet();
-                                        if (item.screen) {
-                                            setTimeout(() => navigation.navigate(item.screen), 300);
-                                        }
-                                    }}
-                                    style={{ alignItems: 'center' }}
-                                >
-                                    <View
-                                        style={{
-                                            width: 60,
-                                            height: 60,
-                                            borderRadius: 16,
-                                            backgroundColor: COLORS.successLight,
-                                            justifyContent: 'center',
-                                            alignItems: 'center',
-                                            marginBottom: 8,
-                                        }}
-                                    >
-                                        <Text style={{ fontSize: 28 }}>{item.icon}</Text>
-                                    </View>
-                                    <Text
-                                        style={{
-                                            fontSize: 13,
-                                            fontWeight: '600',
-                                            color: COLORS.text,
-                                        }}
-                                    >
-                                        {item.label}
-                                    </Text>
-                                </TouchableOpacity>
-                            ))}
+                        {/* Two-Column Grid Layout */}
+                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
+                            {/* Row 1: Quick Entry Methods */}
+                            <TouchableOpacity
+                                activeOpacity={0.7}
+                                onPress={() => {
+                                    closeSheet();
+                                    setTimeout(() => navigation.navigate('VoiceInput'), 300);
+                                }}
+                                style={{ width: '48%', marginBottom: 16 }}
+                            >
+                                <View style={{
+                                    backgroundColor: COLORS.successLight,
+                                    borderRadius: 16,
+                                    padding: 20,
+                                    alignItems: 'center',
+                                }}>
+                                    <Text style={{ fontSize: 32, marginBottom: 8 }}>🎤</Text>
+                                    <Text style={{ fontSize: 14, fontWeight: '700', color: COLORS.text }}>Voice Entry</Text>
+                                    <Text style={{ fontSize: 11, color: COLORS.textMuted, marginTop: 2 }}>Fastest way</Text>
+                                </View>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                activeOpacity={0.7}
+                                onPress={() => {
+                                    closeSheet();
+                                    setTimeout(() => navigation.navigate('CameraScan'), 300);
+                                }}
+                                style={{ width: '48%', marginBottom: 16 }}
+                            >
+                                <View style={{
+                                    backgroundColor: COLORS.orangeLight,
+                                    borderRadius: 16,
+                                    padding: 20,
+                                    alignItems: 'center',
+                                }}>
+                                    <Text style={{ fontSize: 32, marginBottom: 8 }}>📸</Text>
+                                    <Text style={{ fontSize: 14, fontWeight: '700', color: COLORS.text }}>Photo/OCR</Text>
+                                    <Text style={{ fontSize: 11, color: COLORS.textMuted, marginTop: 2 }}>Scan receipt</Text>
+                                </View>
+                            </TouchableOpacity>
+
+                            {/* Row 2: Other Methods */}
+                            <TouchableOpacity
+                                activeOpacity={0.7}
+                                onPress={() => {
+                                    closeSheet();
+                                    setTimeout(() => navigation.navigate('ManualEntry'), 300);
+                                }}
+                                style={{ width: '31%', alignItems: 'center' }}
+                            >
+                                <View style={{
+                                    width: 56,
+                                    height: 56,
+                                    borderRadius: 14,
+                                    backgroundColor: '#F3F4F6',
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                    marginBottom: 6,
+                                }}>
+                                    <Text style={{ fontSize: 24 }}>✏️</Text>
+                                </View>
+                                <Text style={{ fontSize: 12, fontWeight: '600', color: COLORS.text }}>Manual</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                activeOpacity={0.7}
+                                onPress={() => {
+                                    closeSheet();
+                                    Alert.alert('WhatsApp', 'Coming soon!');
+                                }}
+                                style={{ width: '31%', alignItems: 'center' }}
+                            >
+                                <View style={{
+                                    width: 56,
+                                    height: 56,
+                                    borderRadius: 14,
+                                    backgroundColor: '#F3F4F6',
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                    marginBottom: 6,
+                                }}>
+                                    <Text style={{ fontSize: 24 }}>💬</Text>
+                                </View>
+                                <Text style={{ fontSize: 12, fontWeight: '600', color: COLORS.text }}>WhatsApp</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                activeOpacity={0.7}
+                                onPress={() => {
+                                    closeSheet();
+                                    setTimeout(() => navigation.navigate('UdharPayment'), 300);
+                                }}
+                                style={{ width: '31%', alignItems: 'center' }}
+                            >
+                                <View style={{
+                                    width: 56,
+                                    height: 56,
+                                    borderRadius: 14,
+                                    backgroundColor: COLORS.primaryLight,
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                    marginBottom: 6,
+                                }}>
+                                    <Text style={{ fontSize: 24 }}>💳</Text>
+                                </View>
+                                <Text style={{ fontSize: 12, fontWeight: '600', color: COLORS.primary }}>Pay Udhar</Text>
+                            </TouchableOpacity>
                         </View>
                     </Animated.View>
                 </TouchableOpacity>
@@ -618,7 +795,9 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
                                         }}
                                         onPress={() => {
                                             setShowTxnDetails(false);
-                                            alert('apni ammi kyon chuda raha hai bhosdike jaa na apna kam kr jitna dekhne ko bola unta hi dekh');
+                                            if (selectedTxn) {
+                                                navigation.navigate('EditTransaction', { transaction: selectedTxn });
+                                            }
                                         }}
                                     >
                                         <Text style={{ fontWeight: '600', color: COLORS.text }}>Edit</Text>

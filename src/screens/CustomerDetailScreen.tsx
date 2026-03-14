@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
     View,
     Text,
@@ -7,10 +7,17 @@ import {
     StatusBar,
     ActivityIndicator,
     RefreshControl,
+    Modal,
+    TextInput,
+    Alert,
+    Linking,
+    Platform,
 } from 'react-native';
 import { COLORS } from '../constants';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getCustomerTransactions } from '../api/customers';
+import { createTransaction } from '../api/transactions';
+import { useAppStore } from '../store/useAppStore';
 import type { Transaction } from '../types';
 
 interface CustomerDetailScreenProps {
@@ -19,7 +26,12 @@ interface CustomerDetailScreenProps {
 }
 
 export default function CustomerDetailScreen({ navigation, route }: CustomerDetailScreenProps) {
-    const { customerId, customerName } = route.params || {};
+    const { customerId, customerName, customerPhone } = route.params || {};
+    const { businessId } = useAppStore();
+    const queryClient = useQueryClient();
+
+    const [showPaymentModal, setShowPaymentModal] = useState(false);
+    const [paymentAmount, setPaymentAmount] = useState('');
 
     const { data, isLoading, refetch, isRefetching } = useQuery({
         queryKey: ['customerTransactions', customerId],
@@ -36,6 +48,8 @@ export default function CustomerDetailScreen({ navigation, route }: CustomerDeta
     const totalCash = transactions
         .filter((t) => t.type === 'cash')
         .reduce((sum, t) => sum + t.price, 0);
+
+    const totalUdhar = Math.max(0, totalCredit - totalCash);
 
     const formatCurrency = (n: number) => `₹${n.toLocaleString('en-IN')}`;
 
@@ -58,6 +72,78 @@ export default function CustomerDetailScreen({ navigation, route }: CustomerDeta
             default:
                 return { label: 'OTHER', color: COLORS.textMuted, bg: COLORS.background };
         }
+    };
+
+    // Collect Payment mutation
+    const paymentMutation = useMutation({
+        mutationFn: createTransaction,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['customerTransactions', customerId] });
+            queryClient.invalidateQueries({ queryKey: ['customers'] });
+            queryClient.invalidateQueries({ queryKey: ['transactions'] });
+            setShowPaymentModal(false);
+
+            const paid = parseFloat(paymentAmount) || 0;
+            const remaining = Math.max(0, totalUdhar - paid);
+
+            Alert.alert(
+                '✅ Payment Received',
+                `Received ${formatCurrency(paid)} from ${customerName}.\n\nRemaining balance: ${formatCurrency(remaining)}`,
+            );
+            setPaymentAmount('');
+        },
+        onError: (error: any) => {
+            Alert.alert('Error', error.message || 'Failed to record payment');
+        },
+    });
+
+    const handleCollectPayment = () => {
+        setPaymentAmount(totalUdhar.toString());
+        setShowPaymentModal(true);
+    };
+
+    const confirmPayment = () => {
+        const amount = parseFloat(paymentAmount);
+        if (!amount || amount <= 0) {
+            Alert.alert('Invalid', 'Please enter a valid amount.');
+            return;
+        }
+        if (amount > totalUdhar) {
+            Alert.alert('Too Much', `Amount exceeds outstanding balance of ${formatCurrency(totalUdhar)}.`);
+            return;
+        }
+
+        paymentMutation.mutate({
+            customerId,
+            customerName: customerName || 'Customer',
+            itemName: 'Payment Received',
+            price: amount,
+            type: 'cash',
+            date: new Date().toISOString(),
+            isConfirmed: true,
+            sourceType: 'manual',
+        } as any);
+    };
+
+    // WhatsApp Reminder
+    const sendWhatsAppReminder = () => {
+        if (!customerPhone) {
+            Alert.alert(
+                'No Phone Number',
+                'This customer has no phone number saved. Please edit the customer to add one.',
+                [{ text: 'OK' }],
+            );
+            return;
+        }
+
+        const phone = customerPhone.replace(/\D/g, '');
+        const phoneWithCountry = phone.startsWith('91') ? phone : `91${phone}`;
+        const message = `Namaste ${customerName || 'bhai'} bhai, aapka ₹${totalUdhar.toLocaleString('en-IN')} udhar baaki hai. Kripya jaldi bhejna. 🙏`;
+        const url = `https://wa.me/${phoneWithCountry}?text=${encodeURIComponent(message)}`;
+
+        Linking.openURL(url).catch(() => {
+            Alert.alert('Error', 'Could not open WhatsApp. Is it installed?');
+        });
     };
 
     return (
@@ -100,6 +186,24 @@ export default function CustomerDetailScreen({ navigation, route }: CustomerDeta
                         {transactions.length} transactions
                     </Text>
                 </View>
+
+                {/* WhatsApp Reminder Button */}
+                {customerPhone ? (
+                    <TouchableOpacity
+                        onPress={sendWhatsAppReminder}
+                        style={{
+                            backgroundColor: '#25D366' + '20',
+                            borderRadius: 12,
+                            paddingHorizontal: 12,
+                            paddingVertical: 8,
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                        }}
+                    >
+                        <Text style={{ fontSize: 16, marginRight: 4 }}>📲</Text>
+                        <Text style={{ fontSize: 12, fontWeight: '600', color: '#25D366' }}>Remind</Text>
+                    </TouchableOpacity>
+                ) : null}
             </View>
 
             {/* Summary Cards */}
@@ -133,7 +237,7 @@ export default function CustomerDetailScreen({ navigation, route }: CustomerDeta
                 >
                     <Text style={{ fontSize: 11, color: COLORS.danger, fontWeight: '600' }}>Outstanding</Text>
                     <Text style={{ fontSize: 18, fontWeight: '800', color: COLORS.danger, marginTop: 4 }}>
-                        {formatCurrency(totalCredit)}
+                        {formatCurrency(totalUdhar)}
                     </Text>
                 </View>
             </View>
@@ -208,8 +312,171 @@ export default function CustomerDetailScreen({ navigation, route }: CustomerDeta
                         </View>
                     );
                 })}
-                <View style={{ height: 40 }} />
+                <View style={{ height: totalUdhar > 0 ? 100 : 40 }} />
             </ScrollView>
+
+            {/* Collect Payment Button — Fixed at Bottom */}
+            {totalUdhar > 0 && !isLoading && (
+                <View
+                    style={{
+                        position: 'absolute',
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        paddingHorizontal: 20,
+                        paddingBottom: Platform.OS === 'ios' ? 34 : 20,
+                        paddingTop: 12,
+                        backgroundColor: COLORS.background,
+                        borderTopWidth: 1,
+                        borderTopColor: COLORS.border,
+                    }}
+                >
+                    <TouchableOpacity
+                        onPress={handleCollectPayment}
+                        activeOpacity={0.85}
+                        style={{
+                            backgroundColor: COLORS.success,
+                            borderRadius: 14,
+                            paddingVertical: 16,
+                            alignItems: 'center',
+                            shadowColor: COLORS.success,
+                            shadowOffset: { width: 0, height: 4 },
+                            shadowOpacity: 0.3,
+                            shadowRadius: 8,
+                            elevation: 4,
+                        }}
+                    >
+                        <Text style={{ fontSize: 17, fontWeight: '800', color: COLORS.white }}>
+                            💰 Collect Payment {formatCurrency(totalUdhar)}
+                        </Text>
+                    </TouchableOpacity>
+                </View>
+            )}
+
+            {/* Payment Modal */}
+            <Modal
+                visible={showPaymentModal}
+                transparent
+                animationType="slide"
+                onRequestClose={() => setShowPaymentModal(false)}
+            >
+                <View
+                    style={{
+                        flex: 1,
+                        backgroundColor: 'rgba(0,0,0,0.5)',
+                        justifyContent: 'flex-end',
+                    }}
+                >
+                    <View
+                        style={{
+                            backgroundColor: COLORS.background,
+                            borderTopLeftRadius: 24,
+                            borderTopRightRadius: 24,
+                            paddingTop: 8,
+                            paddingBottom: Platform.OS === 'ios' ? 40 : 24,
+                            paddingHorizontal: 24,
+                        }}
+                    >
+                        {/* Handle bar */}
+                        <View style={{ alignItems: 'center', marginBottom: 20 }}>
+                            <View
+                                style={{
+                                    width: 40,
+                                    height: 4,
+                                    borderRadius: 2,
+                                    backgroundColor: COLORS.border,
+                                }}
+                            />
+                        </View>
+
+                        {/* Title */}
+                        <Text style={{ fontSize: 20, fontWeight: '800', color: COLORS.text, marginBottom: 4 }}>
+                            Collect Payment
+                        </Text>
+                        <Text style={{ fontSize: 14, color: COLORS.textMuted, marginBottom: 24 }}>
+                            From {customerName || 'Customer'} · Outstanding: {formatCurrency(totalUdhar)}
+                        </Text>
+
+                        {/* Amount Input */}
+                        <Text style={{ fontSize: 13, fontWeight: '600', color: COLORS.textMuted, marginBottom: 8, letterSpacing: 0.5 }}>
+                            PAYMENT AMOUNT
+                        </Text>
+                        <View
+                            style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                backgroundColor: COLORS.card,
+                                borderRadius: 12,
+                                borderWidth: 2,
+                                borderColor: COLORS.success,
+                                paddingHorizontal: 16,
+                                marginBottom: 8,
+                            }}
+                        >
+                            <Text style={{ fontSize: 24, fontWeight: '700', color: COLORS.success, marginRight: 4 }}>₹</Text>
+                            <TextInput
+                                value={paymentAmount}
+                                onChangeText={setPaymentAmount}
+                                keyboardType="numeric"
+                                autoFocus
+                                style={{
+                                    flex: 1,
+                                    fontSize: 28,
+                                    fontWeight: '800',
+                                    color: COLORS.text,
+                                    paddingVertical: 16,
+                                }}
+                                placeholder="0"
+                                placeholderTextColor={COLORS.textMuted}
+                            />
+                        </View>
+                        <Text style={{ fontSize: 12, color: COLORS.textMuted, marginBottom: 24 }}>
+                            You can collect a partial payment too
+                        </Text>
+
+                        {/* Buttons */}
+                        <View style={{ flexDirection: 'row', gap: 12 }}>
+                            <TouchableOpacity
+                                onPress={() => {
+                                    setShowPaymentModal(false);
+                                    setPaymentAmount('');
+                                }}
+                                style={{
+                                    flex: 1,
+                                    backgroundColor: COLORS.card,
+                                    borderRadius: 12,
+                                    paddingVertical: 14,
+                                    alignItems: 'center',
+                                    borderWidth: 1,
+                                    borderColor: COLORS.border,
+                                }}
+                            >
+                                <Text style={{ fontSize: 15, fontWeight: '600', color: COLORS.text }}>Cancel</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                onPress={confirmPayment}
+                                disabled={paymentMutation.isPending}
+                                style={{
+                                    flex: 2,
+                                    backgroundColor: COLORS.success,
+                                    borderRadius: 12,
+                                    paddingVertical: 14,
+                                    alignItems: 'center',
+                                    opacity: paymentMutation.isPending ? 0.7 : 1,
+                                }}
+                            >
+                                {paymentMutation.isPending ? (
+                                    <ActivityIndicator color={COLORS.white} />
+                                ) : (
+                                    <Text style={{ fontSize: 15, fontWeight: '700', color: COLORS.white }}>
+                                        ✅ Confirm Payment
+                                    </Text>
+                                )}
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 }

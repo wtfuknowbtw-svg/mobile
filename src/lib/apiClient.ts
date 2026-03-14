@@ -23,9 +23,9 @@ export async function apiRequest<T = any>(
     console.log('API Request - API_BASE_URL:', API_BASE_URL);
     console.log('API Request - Token:', token ? 'Bearer ' + token.substring(0, 20) + '...' : 'NO TOKEN');
 
-    const headers: HeadersInit = {
+    const headers: Record<string, string> = {
         'Content-Type': 'application/json',
-        ...options.headers,
+        ...(options.headers as Record<string, string>),
     };
 
     // Add JWT token if available
@@ -42,7 +42,18 @@ export async function apiRequest<T = any>(
             headers,
         });
 
-        const data = await response.json();
+        const contentType = response.headers.get('content-type');
+        let data: any = {};
+        
+        if (contentType && contentType.includes('application/json')) {
+            data = await response.json();
+        } else {
+            const text = await response.text();
+            console.error('API Response is not JSON:', text.substring(0, 200));
+            return {
+                error: `Server returned non-JSON response (${response.status}). Expected JSON.`,
+            };
+        }
 
         if (!response.ok) {
             return {

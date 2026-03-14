@@ -10,6 +10,8 @@ import {
     RefreshControl,
     Alert,
     Modal,
+    KeyboardAvoidingView,
+    Platform,
 } from 'react-native';
 import { COLORS } from '../constants';
 import { useAppStore } from '../store/useAppStore';
@@ -54,13 +56,15 @@ export default function CustomersScreen({ navigation }: CustomersScreenProps) {
     );
 
     const udharCustomers = filtered.filter((c) => c.totalUdhar > 0);
-    const regularCustomers = filtered.filter((c) => c.totalUdhar === 0);
+    const regularCustomers = filtered.filter((c) => c.totalUdhar <= 0);
 
     const formatCurrency = (n: number) => `₹${n.toLocaleString('en-IN')}`;
 
     const getInitialColor = (name: string) => {
+        if (!name) return COLORS.primary;
         const colors = [COLORS.danger, COLORS.primary, COLORS.success, COLORS.orange];
-        return colors[name.charCodeAt(0) % colors.length];
+        const code = name.charCodeAt(0);
+        return colors[isNaN(code) ? 0 : code % colors.length];
     };
 
     const handleAddCustomer = () => {
@@ -76,7 +80,7 @@ export default function CustomersScreen({ navigation }: CustomersScreenProps) {
         <TouchableOpacity
             key={customer.id}
             activeOpacity={0.7}
-            onPress={() => navigation.navigate('CustomerDetail', { customerId: customer.id, customerName: customer.name })}
+            onPress={() => navigation.navigate('CustomerDetail', { customerId: customer.id, customerName: customer.name, customerPhone: customer.phone })}
             style={{
                 flexDirection: 'row',
                 alignItems: 'center',
@@ -162,18 +166,22 @@ export default function CustomersScreen({ navigation }: CustomersScreenProps) {
                 </View>
                 <TouchableOpacity
                     onPress={() => setShowAddModal(true)}
+                    activeOpacity={0.8}
                     style={{
-                        width: 32,
-                        height: 32,
-                        borderRadius: 8,
-                        borderWidth: 1,
-                        borderColor: COLORS.border,
-                        justifyContent: 'center',
+                        paddingHorizontal: 12,
+                        paddingVertical: 8,
+                        borderRadius: 10,
+                        backgroundColor: COLORS.successLight,
+                        flexDirection: 'row',
                         alignItems: 'center',
-                        backgroundColor: COLORS.card,
+                        borderWidth: 1,
+                        borderColor: COLORS.success + '20',
                     }}
                 >
-                    <Text style={{ fontSize: 18, color: COLORS.text }}>+</Text>
+                    <Text style={{ fontSize: 16, marginRight: 4, color: COLORS.success }}>+</Text>
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.success }}>
+                        {i18n.t('customers.addNew')}
+                    </Text>
                 </TouchableOpacity>
             </View>
 
@@ -214,6 +222,21 @@ export default function CustomersScreen({ navigation }: CustomersScreenProps) {
                 {isLoading && (
                     <View style={{ paddingVertical: 40, alignItems: 'center' }}>
                         <ActivityIndicator size="large" color={COLORS.success} />
+                    </View>
+                )}
+
+                {!isLoading && customers.length > 0 && filtered.length === 0 && (
+                    <View style={{ paddingVertical: 60, alignItems: 'center' }}>
+                        <Text style={{ fontSize: 44, marginBottom: 16 }}>🔍</Text>
+                        <Text style={{ fontSize: 16, fontWeight: '600', color: COLORS.text }}>
+                            No results found for "{search}"
+                        </Text>
+                        <TouchableOpacity 
+                            onPress={() => setSearch('')}
+                            style={{ marginTop: 12 }}
+                        >
+                            <Text style={{ color: COLORS.primary, fontWeight: '700' }}>Clear Search</Text>
+                        </TouchableOpacity>
                     </View>
                 )}
 
@@ -269,112 +292,135 @@ export default function CustomersScreen({ navigation }: CustomersScreenProps) {
             </ScrollView>
 
             {/* Add Customer Modal */}
-            <Modal visible={showAddModal} transparent animationType="fade">
-                <View
-                    style={{
-                        flex: 1,
-                        backgroundColor: 'rgba(0,0,0,0.4)',
-                        justifyContent: 'center',
-                        paddingHorizontal: 24,
-                    }}
+            <Modal visible={showAddModal} transparent animationType="slide">
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    style={{ flex: 1 }}
                 >
                     <View
                         style={{
-                            backgroundColor: COLORS.card,
-                            borderRadius: 16,
-                            padding: 24,
+                            flex: 1,
+                            backgroundColor: 'rgba(0,0,0,0.5)',
+                            justifyContent: 'center',
+                            paddingHorizontal: 24,
                         }}
                     >
-                        <Text style={{ fontSize: 18, fontWeight: '700', color: COLORS.text, marginBottom: 20 }}>
-                            Add Customer
-                        </Text>
-
-                        <Text style={{ fontSize: 13, fontWeight: '600', color: COLORS.textMuted, marginBottom: 6 }}>
-                            Name *
-                        </Text>
-                        <TextInput
-                            value={newName}
-                            onChangeText={setNewName}
-                            placeholder="e.g. Raja Kumar"
-                            placeholderTextColor={COLORS.textMuted}
+                        <View
                             style={{
-                                backgroundColor: COLORS.background,
-                                borderRadius: 10,
-                                borderWidth: 1,
-                                borderColor: COLORS.border,
-                                paddingHorizontal: 14,
-                                paddingVertical: 12,
-                                fontSize: 15,
-                                color: COLORS.text,
-                                marginBottom: 16,
+                                backgroundColor: COLORS.card,
+                                borderRadius: 20,
+                                padding: 24,
+                                shadowColor: '#000',
+                                shadowOffset: { width: 0, height: 10 },
+                                shadowOpacity: 0.25,
+                                shadowRadius: 15,
+                                elevation: 10,
                             }}
-                        />
-
-                        <Text style={{ fontSize: 13, fontWeight: '600', color: COLORS.textMuted, marginBottom: 6 }}>
-                            Phone (optional)
-                        </Text>
-                        <TextInput
-                            value={newPhone}
-                            onChangeText={setNewPhone}
-                            placeholder="e.g. 9876543210"
-                            placeholderTextColor={COLORS.textMuted}
-                            keyboardType="phone-pad"
-                            maxLength={10}
-                            style={{
-                                backgroundColor: COLORS.background,
-                                borderRadius: 10,
-                                borderWidth: 1,
-                                borderColor: COLORS.border,
-                                paddingHorizontal: 14,
-                                paddingVertical: 12,
-                                fontSize: 15,
-                                color: COLORS.text,
-                                marginBottom: 24,
-                            }}
-                        />
-
-                        <View style={{ flexDirection: 'row', gap: 12 }}>
-                            <TouchableOpacity
-                                onPress={() => {
-                                    setShowAddModal(false);
-                                    setNewName('');
-                                    setNewPhone('');
-                                }}
-                                style={{
-                                    flex: 1,
-                                    paddingVertical: 14,
-                                    borderRadius: 10,
-                                    borderWidth: 1,
-                                    borderColor: COLORS.border,
-                                    alignItems: 'center',
-                                }}
-                            >
-                                <Text style={{ fontSize: 15, fontWeight: '600', color: COLORS.textMuted }}>
-                                    Cancel
+                        >
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                                <Text style={{ fontSize: 20, fontWeight: '800', color: COLORS.text }}>
+                                    {i18n.t('customers.addNew')}
                                 </Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                onPress={handleAddCustomer}
-                                disabled={!newName.trim() || addMutation.isPending}
+                                <TouchableOpacity onPress={() => setShowAddModal(false)}>
+                                    <Text style={{ fontSize: 20, color: COLORS.textMuted }}>✕</Text>
+                                </TouchableOpacity>
+                            </View>
+
+                            <Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.textMuted, marginBottom: 8, letterSpacing: 0.5 }}>
+                                NAME *
+                            </Text>
+                            <TextInput
+                                value={newName}
+                                onChangeText={setNewName}
+                                placeholder="e.g. Ramesh Kumar"
+                                placeholderTextColor={COLORS.textMuted}
+                                autoFocus
                                 style={{
-                                    flex: 1.5,
+                                    backgroundColor: COLORS.background,
+                                    borderRadius: 12,
+                                    borderWidth: 1.5,
+                                    borderColor: COLORS.border,
+                                    paddingHorizontal: 16,
                                     paddingVertical: 14,
-                                    borderRadius: 10,
-                                    backgroundColor: newName.trim() ? COLORS.success : COLORS.border,
-                                    alignItems: 'center',
+                                    fontSize: 16,
+                                    color: COLORS.text,
+                                    marginBottom: 20,
                                 }}
-                            >
-                                {addMutation.isPending ? (
-                                    <ActivityIndicator color={COLORS.white} />
-                                ) : (
-                                    <Text style={{ fontSize: 15, fontWeight: '700', color: COLORS.white }}>
-                                        Add Customer
+                            />
+
+                            <Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.textMuted, marginBottom: 8, letterSpacing: 0.5 }}>
+                                PHONE (OPTIONAL)
+                            </Text>
+                            <TextInput
+                                value={newPhone}
+                                onChangeText={setNewPhone}
+                                placeholder="10-digit mobile number"
+                                placeholderTextColor={COLORS.textMuted}
+                                keyboardType="phone-pad"
+                                maxLength={10}
+                                style={{
+                                    backgroundColor: COLORS.background,
+                                    borderRadius: 12,
+                                    borderWidth: 1.5,
+                                    borderColor: COLORS.border,
+                                    paddingHorizontal: 16,
+                                    paddingVertical: 14,
+                                    fontSize: 16,
+                                    color: COLORS.text,
+                                    marginBottom: 28,
+                                }}
+                            />
+
+                            <View style={{ flexDirection: 'row', gap: 12 }}>
+                                <TouchableOpacity
+                                    onPress={() => {
+                                        setShowAddModal(false);
+                                        setNewName('');
+                                        setNewPhone('');
+                                    }}
+                                    style={{
+                                        flex: 1,
+                                        paddingVertical: 16,
+                                        borderRadius: 14,
+                                        borderWidth: 1,
+                                        borderColor: COLORS.border,
+                                        alignItems: 'center',
+                                        backgroundColor: COLORS.card,
+                                    }}
+                                >
+                                    <Text style={{ fontSize: 16, fontWeight: '600', color: COLORS.textMuted }}>
+                                        Cancel
                                     </Text>
-                                )}
-                            </TouchableOpacity>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    onPress={handleAddCustomer}
+                                    disabled={!newName.trim() || addMutation.isPending}
+                                    activeOpacity={0.8}
+                                    style={{
+                                        flex: 2,
+                                        paddingVertical: 16,
+                                        borderRadius: 14,
+                                        backgroundColor: newName.trim() ? COLORS.success : COLORS.border,
+                                        alignItems: 'center',
+                                        shadowColor: COLORS.success,
+                                        shadowOffset: { width: 0, height: 4 },
+                                        shadowOpacity: newName.trim() ? 0.3 : 0,
+                                        shadowRadius: 8,
+                                        elevation: 4,
+                                    }}
+                                >
+                                    {addMutation.isPending ? (
+                                        <ActivityIndicator color={COLORS.white} />
+                                    ) : (
+                                        <Text style={{ fontSize: 16, fontWeight: '800', color: COLORS.white }}>
+                                            Save Customer
+                                        </Text>
+                                    )}
+                                </TouchableOpacity>
+                            </View>
                         </View>
                     </View>
-                </View>
+                </KeyboardAvoidingView>
             </Modal>
         </View>
     );

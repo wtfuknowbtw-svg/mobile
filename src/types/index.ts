@@ -19,9 +19,10 @@ export interface Customer {
     createdAt: string;
     lastTransaction?: string;
     transactionCount?: number;
+    transactions?: Transaction[];
 }
 
-export type TransactionType = 'credit' | 'cash' | 'expense' | 'unknown';
+export type TransactionType = 'credit' | 'cash' | 'expense' | 'udhar_payment' | 'unknown';
 export type SourceType = 'ocr' | 'voice' | 'manual' | 'whatsapp';
 
 export interface Transaction {
@@ -78,8 +79,10 @@ export type RootStackParamList = {
     CameraScan: undefined;
     ReviewOCR: { receiptData?: any; imageUrl?: string; transcript?: string };
     ManualEntry: { prefilledData?: { customerName: string; itemName: string; price: number; type: 'cash' | 'credit' | 'expense' } };
-    CustomerDetail: { customerId: string; customerName?: string };
+    CustomerDetail: { customerId: string; customerName?: string; customerPhone?: string };
     EditTransaction: { transaction: Transaction };
+    UdharPayment: undefined;
+    BusinessProfile: undefined;
 };
 
 export type MainTabParamList = {

@@ -35,7 +35,8 @@
     "all": "ALL CUSTOMERS",
     "owed": "owed",
     "supplier": "SUPPLIER",
-    "noPhone": "No phone"
+    "noPhone": "No phone",
+    "addNew": "Add New Customer"
   },
   "reports": {
     "title": "Reports",

@@ -1,27 +1,27 @@
 import { apiGet, apiPost } from '../lib/apiClient';
-import type { Customer } from '../types';
+import type { Customer, Transaction } from '../types';
 
 export const getCustomers = async (businessId?: string): Promise<{ data?: Customer[]; error?: string }> => {
-    const response = await apiGet<Customer[]>('/customers');
+    const response = await apiGet<{ data: Customer[] }>('/customers');
     
     if (response.error) {
         return { error: response.error };
     }
 
     // Backend returns data in the format { data: Customer[] }
-    const customers = response.data?.data || response.data || [];
+    const customers = response.data?.data || [];
     
     return { data: customers };
 };
 
 export const getCustomer = async (id: string): Promise<{ data?: Customer; error?: string }> => {
-    const response = await apiGet<Customer>(`/customers?id=${id}`);
+    const response = await apiGet<{ data: Customer }>(`/customers?id=${id}`);
     
     if (response.error) {
         return { error: response.error };
     }
 
-    return { data: response.data?.data || response.data as Customer };
+    return { data: response.data?.data };
 };
 
 export const createCustomer = async (
@@ -36,7 +36,7 @@ export const createCustomer = async (
         return { error: response.error };
     }
 
-    return { data: response.data?.data || response.data as Customer };
+    return { data: response.data?.data };
 };
 
 // Note: updateCustomerUdhar is handled automatically by the backend when transactions are created/updated
@@ -49,21 +49,16 @@ export const updateCustomerUdhar = async (
     return {};
 };
 
-import type { Transaction } from '../types';
-
 export const getCustomerTransactions = async (
     customerId: string
 ): Promise<{ data?: Transaction[]; error?: string }> => {
-    // Get all transactions and filter by customerId on the client side
-    // In the future, we can add a backend endpoint for this
-    const response = await apiGet<{ data: Transaction[] }>('/transactions');
+    // Use the customer endpoint which returns customer object with transactions included
+    const response = await apiGet<{ data: Customer }>(`/customers?id=${customerId}`);
     
     if (response.error) {
         return { error: response.error };
     }
 
-    const allTransactions = response.data?.data || [];
-    const customerTransactions = allTransactions.filter((t) => t.customerId === customerId);
-    
-    return { data: customerTransactions };
+    const customer = response.data?.data;
+    return { data: customer?.transactions || [] };
 };

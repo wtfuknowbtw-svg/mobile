@@ -72,6 +72,9 @@ export default function OTPLoginScreen({ navigation }: OTPLoginScreenProps) {
             if (res.user?.id) {
                 setBusinessId(res.user.id);
             }
+            if (res.user?.phone) {
+                storeSetPhone(res.user.phone);
+            }
             if (res.token) {
                 setToken(res.token);
             }

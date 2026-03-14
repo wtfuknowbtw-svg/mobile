@@ -6,6 +6,9 @@ import {
     ScrollView,
     StatusBar,
     ActivityIndicator,
+    Share,
+    Alert,
+    Platform,
 } from 'react-native';
 import { COLORS } from '../constants';
 import { useAppStore } from '../store/useAppStore';
@@ -20,7 +23,6 @@ interface ReportsScreenProps {
 
 export default function ReportsScreen({ navigation }: ReportsScreenProps) {
     const { businessId } = useAppStore();
-    const [selectedPeriod, setSelectedPeriod] = useState<'Week' | 'Month' | 'Year'>('Week');
 
     const { data: txnsResponse, isLoading } = useQuery({
         queryKey: ['transactions', businessId],
@@ -32,298 +34,601 @@ export default function ReportsScreen({ navigation }: ReportsScreenProps) {
 
     const formatCurrency = (n: number) => `₹${n.toLocaleString('en-IN')}`;
 
-    // Compute stats from real data
+    // Calculate stats from real data
     const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const weekStart = new Date(now);
     weekStart.setDate(weekStart.getDate() - 7);
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    const yearStart = new Date(now.getFullYear(), 0, 1);
 
-    const periodStart = selectedPeriod === 'Week' ? weekStart : selectedPeriod === 'Month' ? monthStart : yearStart;
-
-    const periodTxns = transactions.filter((t) => new Date(t.date) >= periodStart);
-
-    const totalSales = periodTxns
-        .filter((t) => t.type === 'cash')
+    // Today's total sales (cash transactions today)
+    const todaySales = transactions
+        .filter((t) => {
+            const txnDate = new Date(t.date);
+            return t.type === 'cash' && txnDate >= todayStart;
+        })
         .reduce((sum, t) => sum + t.price, 0);
 
-    const totalOutstanding = periodTxns
+    // Total udhar outstanding
+    const totalCredit = transactions
         .filter((t) => t.type === 'credit')
         .reduce((sum, t) => sum + t.price, 0);
+    
+    const totalPaymentsReceived = transactions
+        .filter((t) => 
+            (t.type === 'udhar_payment') || 
+            (t.type === 'cash' && t.customerName && t.customerName !== 'Cash Sale')
+        )
+        .reduce((sum, t) => sum + t.price, 0);
 
-    // Bar chart data — last 7 days
-    const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    const chartData = dayLabels.map((day, index) => {
-        const targetDate = new Date(now);
-        const currentDayOfWeek = now.getDay(); // 0=Sun, 1=Mon, ...
-        const diff = (index + 1) - currentDayOfWeek; // Mon=1
-        targetDate.setDate(now.getDate() + diff);
-        const dayStart = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
-        const dayEnd = new Date(dayStart);
-        dayEnd.setDate(dayEnd.getDate() + 1);
+    const totalUdharOutstanding = Math.max(0, totalCredit - totalPaymentsReceived);
 
-        const dayTotal = transactions
-            .filter((t) => {
-                const d = new Date(t.date);
-                return d >= dayStart && d < dayEnd && t.type !== 'expense';
-            })
-            .reduce((sum, t) => sum + t.price, 0);
+    // This week's revenue (Cash + Credit, excluding expenses and payments)
+    const weeklyRevenue = transactions
+        .filter((t) => {
+            const txnDate = new Date(t.date);
+            return txnDate >= weekStart && (t.type === 'cash' || t.type === 'credit');
+        })
+        .reduce((sum, t) => sum + t.price, 0);
 
-        return { day, value: dayTotal };
+    // Top 5 customers by udhar amount
+    const customerUdharMap: Record<string, number> = {};
+    transactions.forEach((t) => {
+        if (!t.customerName || t.customerName === 'Cash Sale') return;
+        
+        if (t.type === 'credit') {
+            customerUdharMap[t.customerName] = (customerUdharMap[t.customerName] || 0) + t.price;
+        } else if (t.type === 'cash' || t.type === 'udhar_payment') {
+            customerUdharMap[t.customerName] = (customerUdharMap[t.customerName] || 0) - t.price;
+        }
     });
 
-    const maxValue = Math.max(...chartData.map((d) => d.value), 1);
-
-    // Top items
-    const itemMap: Record<string, { units: number; revenue: number }> = {};
-    periodTxns.forEach((t) => {
-        const name = t.itemName || 'Other';
-        if (!itemMap[name]) itemMap[name] = { units: 0, revenue: 0 };
-        itemMap[name].units += t.quantity || 1;
-        itemMap[name].revenue += t.price;
-    });
-    const topItems = Object.entries(itemMap)
-        .sort(([, a], [, b]) => b.revenue - a.revenue)
+    const topCustomersByUdhar = Object.entries(customerUdharMap)
+        .filter(([, amount]) => amount > 0)
+        .sort(([, a], [, b]) => b - a)
         .slice(0, 5)
-        .map(([name, data]) => ({ label: name, ...data }));
+        .map(([name, amount]) => ({ name, amount }));
 
-    return (
-        <View style={{ flex: 1, backgroundColor: COLORS.background }}>
-            <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
+    // Transaction count by type
+    const transactionCounts = {
+        cash: transactions.filter(t => t.type === 'cash').length,
+        credit: transactions.filter(t => t.type === 'credit').length,
+        expense: transactions.filter(t => t.type === 'expense').length,
+        payment: transactions.filter(t => t.type === 'udhar_payment').length,
+    };
 
-            {/* Header */}
-            <View
-                style={{
+    const totalTransactions = transactionCounts.cash + transactionCounts.credit + transactionCounts.expense + transactionCounts.payment;
+
+    const getPercentage = (count: number) => {
+        if (totalTransactions === 0) return 0;
+        return Math.round((count / totalTransactions) * 100);
+    };
+
+    const handleShareKhata = async () => {
+        if (isLoading) return;
+        
+        const dateStr = new Date().toLocaleDateString('en-IN', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric',
+        });
+
+        const topCustomersText = topCustomersByUdhar.length > 0
+            ? topCustomersByUdhar.map((c, i) => `${i + 1}. ${c.name} — ${formatCurrency(c.amount)}`).join('\n')
+            : i18n.t('reports.noOutstanding');
+
+        const message = `📒 ApnaKhata Business Report\n📅 ${dateStr}\n\n` +
+            `💰 Today's Sales: ${formatCurrency(todaySales)}\n` +
+            `📈 This Week: ${formatCurrency(weeklyRevenue)}\n` +
+            `⏳ Total Udhar: ${formatCurrency(totalUdharOutstanding)}\n\n` +
+            `🏆 Top Customers (Udhar):\n${topCustomersText}\n\n` +
+            `📊 Transaction Stats:\n` +
+            `• Cash Sales: ${transactionCounts.cash}\n` +
+            `• Udhar (Credit): ${transactionCounts.credit}\n` +
+            `• Payments Recv: ${transactionCounts.payment}\n` +
+            `• Expenses: ${transactionCounts.expense}\n\n` +
+            `Shared via ApnaKhata App 🙏`;
+
+        try {
+            await Share.share({ 
+                title: 'ApnaKhata Report',
+                message 
+            });
+        } catch (error) {
+            console.error('Error sharing khata:', error);
+        }
+    };
+
+    const handleShareUdharList = async () => {
+        if (isLoading) return;
+
+        const dateStr = new Date().toLocaleDateString('en-IN', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric',
+        });
+
+        const allUdharCustomers = Object.entries(customerUdharMap)
+            .filter(([, amount]) => amount > 0)
+            .sort(([, a], [, b]) => b - a);
+
+        if (allUdharCustomers.length === 0) {
+            Alert.alert('Empty', 'No customers with outstanding udhar found.');
+            return;
+        }
+
+        const listText = allUdharCustomers
+            .map(([name, amount], i) => `${i + 1}. ${name} — ${formatCurrency(amount)}`)
+            .join('\n');
+
+        const message = `📋 Outstanding Udhar List\n📅 ${dateStr}\n\n${listText}\n\n` +
+            `Total Outstanding: ${formatCurrency(totalUdharOutstanding)}\n` +
+            `Total Customers: ${allUdharCustomers.length}\n\n` +
+            `Shared via ApnaKhata App 🙏`;
+
+        try {
+            await Share.share({ 
+                title: 'Udhar List',
+                message 
+            });
+        } catch (error) {
+            console.error('Error sharing udhar list:', error);
+        }
+    };
+
+    // Empty state
+    if (!isLoading && transactions.length === 0) {
+        return (
+            <View style={{ flex: 1, backgroundColor: COLORS.background }}>
+                <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
+                
+                {/* Header */}
+                <View style={{
                     flexDirection: 'row',
                     justifyContent: 'space-between',
                     alignItems: 'center',
                     paddingTop: 52,
                     paddingHorizontal: 20,
                     paddingBottom: 12,
-                }}
-            >
+                }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <Text style={{ fontSize: 16, marginRight: 8 }}>📊</Text>
+                        <Text style={{ fontSize: 22, fontWeight: '800', color: COLORS.text }}>
+                            {i18n.t('reports.title')}
+                        </Text>
+                    </View>
+                </View>
+
+                {/* Empty State */}
+                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 40 }}>
+                    <Text style={{ fontSize: 64, marginBottom: 16 }}>📈</Text>
+                    <Text style={{ fontSize: 18, fontWeight: '600', color: COLORS.text, textAlign: 'center', marginBottom: 8 }}>
+                        No transactions yet
+                    </Text>
+                    <Text style={{ fontSize: 14, color: COLORS.textMuted, textAlign: 'center' }}>
+                        Start adding transactions to see your business reports here
+                    </Text>
+                </View>
+            </View>
+        );
+    }
+
+    return (
+        <View style={{ flex: 1, backgroundColor: COLORS.background }}>
+            <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
+
+            {/* Header */}
+            <View style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                paddingTop: 52,
+                paddingHorizontal: 20,
+                paddingBottom: 16,
+                backgroundColor: COLORS.background,
+                zIndex: 10,
+            }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Text style={{ fontSize: 16, marginRight: 8 }}>📊</Text>
+                    <Text style={{ fontSize: 22, marginRight: 10 }}>📊</Text>
                     <Text style={{ fontSize: 22, fontWeight: '800', color: COLORS.text }}>
                         {i18n.t('reports.title')}
                     </Text>
                 </View>
-                <TouchableOpacity
-                    onPress={() => {
-                        alert('Generating PDF report for ' + selectedPeriod + '...');
-                        setTimeout(() => alert('Report downloaded successfully!'), 1500);
-                    }}
-                    style={{
-                        width: 36,
-                        height: 36,
-                        borderRadius: 18,
-                        backgroundColor: COLORS.successLight,
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                    }}
-                >
-                    <Text style={{ fontSize: 16 }}>📥</Text>
-                </TouchableOpacity>
-            </View>
-
-            {/* Period Selector */}
-            <View
-                style={{
-                    flexDirection: 'row',
-                    marginHorizontal: 20,
-                    borderRadius: 10,
-                    backgroundColor: COLORS.card,
-                    borderWidth: 1,
-                    borderColor: COLORS.border,
-                    padding: 4,
-                    marginBottom: 20,
-                }}
-            >
-                {(['Week', 'Month', 'Year'] as const).map((period) => (
+                
+                <View style={{ flexDirection: 'row', gap: 10 }}>
                     <TouchableOpacity
-                        key={period}
-                        onPress={() => setSelectedPeriod(period)}
+                        onPress={handleShareUdharList}
+                        disabled={isLoading}
+                        activeOpacity={0.7}
                         style={{
-                            flex: 1,
-                            paddingVertical: 10,
-                            borderRadius: 8,
-                            backgroundColor: selectedPeriod === period ? COLORS.success : 'transparent',
+                            width: 44,
+                            height: 44,
+                            borderRadius: 12,
+                            backgroundColor: COLORS.card,
+                            borderWidth: 1,
+                            borderColor: COLORS.border,
+                            justifyContent: 'center',
                             alignItems: 'center',
+                            shadowColor: '#000',
+                            shadowOffset: { width: 0, height: 1 },
+                            shadowOpacity: 0.1,
+                            shadowRadius: 2,
+                            elevation: 2,
                         }}
                     >
-                        <Text
-                            style={{
-                                fontSize: 14,
-                                fontWeight: '600',
-                                color: selectedPeriod === period ? COLORS.white : COLORS.textMuted,
-                            }}
-                        >
-                            {period}
-                        </Text>
+                        <Text style={{ fontSize: 18 }}>👥</Text>
                     </TouchableOpacity>
-                ))}
+                    <TouchableOpacity
+                        onPress={handleShareKhata}
+                        disabled={isLoading}
+                        activeOpacity={0.7}
+                        style={{
+                            width: 44,
+                            height: 44,
+                            borderRadius: 12,
+                            backgroundColor: COLORS.successLight,
+                            borderWidth: 1,
+                            borderColor: COLORS.success + '20',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            shadowColor: COLORS.success,
+                            shadowOffset: { width: 0, height: 1 },
+                            shadowOpacity: 0.2,
+                            shadowRadius: 2,
+                            elevation: 2,
+                        }}
+                    >
+                        <Text style={{ fontSize: 18 }}>📤</Text>
+                    </TouchableOpacity>
+                </View>
             </View>
 
-            <ScrollView
-                style={{ flex: 1, paddingHorizontal: 20 }}
+            <ScrollView 
+                style={{ flex: 1, paddingHorizontal: 20 }} 
                 showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ paddingBottom: 40 }}
             >
                 {isLoading ? (
                     <View style={{ paddingVertical: 40, alignItems: 'center' }}>
                         <ActivityIndicator size="large" color={COLORS.success} />
+                        <Text style={{ fontSize: 14, color: COLORS.textMuted, marginTop: 12 }}>
+                            Loading reports...
+                        </Text>
                     </View>
                 ) : (
                     <>
-                        {/* Sales Chart Section */}
-                        <Text
-                            style={{
-                                fontSize: 11,
-                                fontWeight: '700',
-                                color: COLORS.textMuted,
-                                letterSpacing: 1,
-                                marginBottom: 16,
-                            }}
-                        >
-                            SALES THIS WEEK
-                        </Text>
-
-                        {/* Bar Chart */}
-                        <View
-                            style={{
-                                backgroundColor: COLORS.card,
-                                borderRadius: 16,
-                                padding: 20,
-                                borderWidth: 1,
-                                borderColor: COLORS.border,
-                                marginBottom: 16,
-                            }}
-                        >
-                            <View
+                        {/* Premium Sharing Banner */}
+                        <View style={{
+                            backgroundColor: COLORS.primaryLight,
+                            borderRadius: 16,
+                            padding: 16,
+                            marginBottom: 20,
+                            borderWidth: 1,
+                            borderColor: COLORS.primary + '20',
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                        }}>
+                            <View style={{ flex: 1 }}>
+                                <Text style={{ fontSize: 15, fontWeight: '700', color: COLORS.primary }}>
+                                    Export & Share Report
+                                </Text>
+                                <Text style={{ fontSize: 12, color: COLORS.textMuted, marginTop: 2 }}>
+                                    Share a professionally formatted summary with anyone.
+                                </Text>
+                            </View>
+                            <TouchableOpacity
+                                onPress={handleShareKhata}
                                 style={{
-                                    flexDirection: 'row',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'flex-end',
-                                    height: 140,
-                                    marginBottom: 12,
+                                    backgroundColor: COLORS.primary,
+                                    paddingHorizontal: 12,
+                                    paddingVertical: 8,
+                                    borderRadius: 10,
                                 }}
                             >
-                                {chartData.map((item) => (
-                                    <View key={item.day} style={{ alignItems: 'center', flex: 1 }}>
-                                        <View
-                                            style={{
-                                                width: 24,
-                                                height: Math.max((item.value / maxValue) * 120, 4),
-                                                backgroundColor:
-                                                    item.value > 0 ? COLORS.success : '#E5E7EB',
-                                                borderRadius: 6,
-                                            }}
-                                        />
-                                        <Text
-                                            style={{
-                                                fontSize: 10,
-                                                color: COLORS.textMuted,
-                                                marginTop: 8,
-                                                fontWeight: '500',
-                                            }}
-                                        >
-                                            {item.day}
+                                <Text style={{ color: COLORS.white, fontWeight: '700', fontSize: 13 }}>Share Now</Text>
+                            </TouchableOpacity>
+                        </View>
+
+                        {/* Today's Sales */}
+                        <View style={{
+                            backgroundColor: COLORS.card,
+                            borderRadius: 16,
+                            padding: 20,
+                            borderWidth: 1,
+                            borderColor: COLORS.border,
+                            marginBottom: 16,
+                            shadowColor: COLORS.success,
+                            shadowOffset: { width: 0, height: 2 },
+                            shadowOpacity: 0.05,
+                            shadowRadius: 8,
+                            elevation: 2,
+                        }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+                                <View style={{
+                                    width: 40,
+                                    height: 40,
+                                    borderRadius: 10,
+                                    backgroundColor: COLORS.successLight,
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                    marginRight: 12,
+                                }}>
+                                    <Text style={{ fontSize: 20 }}>💰</Text>
+                                </View>
+                                <View>
+                                    <Text style={{ fontSize: 12, color: COLORS.textMuted, fontWeight: '600' }}>
+                                        TODAY'S SALES
+                                    </Text>
+                                    <Text style={{ fontSize: 24, fontWeight: '800', color: COLORS.text }}>
+                                        {formatCurrency(todaySales)}
+                                    </Text>
+                                </View>
+                            </View>
+                        </View>
+
+                        {/* Udhar Outstanding */}
+                        <View style={{
+                            backgroundColor: COLORS.card,
+                            borderRadius: 16,
+                            padding: 20,
+                            borderWidth: 1,
+                            borderColor: COLORS.border,
+                            marginBottom: 16,
+                            shadowColor: COLORS.danger,
+                            shadowOffset: { width: 0, height: 2 },
+                            shadowOpacity: 0.05,
+                            shadowRadius: 8,
+                            elevation: 2,
+                        }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+                                <View style={{
+                                    width: 40,
+                                    height: 40,
+                                    borderRadius: 10,
+                                    backgroundColor: COLORS.dangerLight,
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                    marginRight: 12,
+                                }}>
+                                    <Text style={{ fontSize: 20 }}>⏳</Text>
+                                </View>
+                                <View>
+                                    <Text style={{ fontSize: 12, color: COLORS.textMuted, fontWeight: '600' }}>
+                                        TOTAL UDHAR OUTSTANDING
+                                    </Text>
+                                    <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
+                                        <Text style={{ fontSize: 24, fontWeight: '800', color: COLORS.danger }}>
+                                            {formatCurrency(totalUdharOutstanding)}
+                                        </Text>
+                                        <Text style={{ marginLeft: 8, fontSize: 12, color: COLORS.textMuted }}>
+                                            ({topCustomersByUdhar.length} customers)
                                         </Text>
                                     </View>
-                                ))}
+                                </View>
                             </View>
                         </View>
 
-                        {/* Summary Cards */}
-                        <View style={{ flexDirection: 'row', gap: 12, marginBottom: 24 }}>
-                            <View style={{
-                                flex: 1,
-                                backgroundColor: COLORS.card,
-                                borderRadius: 16,
-                                padding: 16,
-                                borderWidth: 1,
-                                borderColor: COLORS.border,
-                                shadowColor: COLORS.success,
-                                shadowOffset: { width: 0, height: 4 },
-                                shadowOpacity: 0.05,
-                                shadowRadius: 10,
-                                elevation: 2
-                            }}>
-                                <View style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: COLORS.successLight, justifyContent: 'center', alignItems: 'center', marginBottom: 12 }}>
-                                    <Text style={{ fontSize: 16 }}>💰</Text>
+                        {/* This Week's Revenue */}
+                        <View style={{
+                            backgroundColor: COLORS.card,
+                            borderRadius: 16,
+                            padding: 20,
+                            borderWidth: 1,
+                            borderColor: COLORS.border,
+                            marginBottom: 16,
+                            shadowColor: COLORS.primary,
+                            shadowOffset: { width: 0, height: 2 },
+                            shadowOpacity: 0.05,
+                            shadowRadius: 8,
+                            elevation: 2,
+                        }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+                                <View style={{
+                                    width: 40,
+                                    height: 40,
+                                    borderRadius: 10,
+                                    backgroundColor: COLORS.primaryLight,
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                    marginRight: 12,
+                                }}>
+                                    <Text style={{ fontSize: 20 }}>📈</Text>
                                 </View>
-                                <Text style={{ fontSize: 12, color: COLORS.textMuted, fontWeight: '600', marginBottom: 4 }}>TOTAL SALES</Text>
-                                <Text style={{ fontSize: 20, fontWeight: '800', color: COLORS.text }}>{formatCurrency(totalSales)}</Text>
-                                <Text style={{ fontSize: 10, color: COLORS.success, fontWeight: '700', marginTop: 4 }}>+12% vs last {selectedPeriod.toLowerCase()}</Text>
-                            </View>
-                            <View style={{
-                                flex: 1,
-                                backgroundColor: COLORS.card,
-                                borderRadius: 16,
-                                padding: 16,
-                                borderWidth: 1,
-                                borderColor: COLORS.border,
-                                shadowColor: COLORS.danger,
-                                shadowOffset: { width: 0, height: 4 },
-                                shadowOpacity: 0.05,
-                                shadowRadius: 10,
-                                elevation: 2
-                            }}>
-                                <View style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: COLORS.dangerLight, justifyContent: 'center', alignItems: 'center', marginBottom: 12 }}>
-                                    <Text style={{ fontSize: 16 }}>⏳</Text>
+                                <View>
+                                    <Text style={{ fontSize: 12, color: COLORS.textMuted, fontWeight: '600' }}>
+                                        THIS WEEK'S REVENUE
+                                    </Text>
+                                    <Text style={{ fontSize: 24, fontWeight: '800', color: COLORS.text }}>
+                                        {formatCurrency(weeklyRevenue)}
+                                    </Text>
                                 </View>
-                                <Text style={{ fontSize: 12, color: COLORS.textMuted, fontWeight: '600', marginBottom: 4 }}>OUTSTANDING</Text>
-                                <Text style={{ fontSize: 20, fontWeight: '800', color: COLORS.text }}>{formatCurrency(totalOutstanding)}</Text>
-                                <Text style={{ fontSize: 10, color: COLORS.danger, fontWeight: '700', marginTop: 4 }}>Action required</Text>
                             </View>
                         </View>
 
-                        {/* Top Items */}
-                        <Text
-                            style={{
-                                fontSize: 11,
-                                fontWeight: '700',
-                                color: COLORS.textMuted,
-                                letterSpacing: 1,
-                                marginBottom: 12,
-                            }}
-                        >
-                            TOP ITEMS · {selectedPeriod.toUpperCase()}
+                        {/* Transaction Type Breakdown */}
+                        <Text style={{
+                            fontSize: 12,
+                            fontWeight: '700',
+                            color: COLORS.textMuted,
+                            letterSpacing: 1,
+                            marginBottom: 12,
+                            marginTop: 8,
+                        }}>
+                            TRANSACTION BREAKDOWN
                         </Text>
 
-                        <View
-                            style={{
-                                backgroundColor: COLORS.card,
-                                borderRadius: 12,
-                                borderWidth: 1,
-                                borderColor: COLORS.border,
-                                overflow: 'hidden',
-                                marginBottom: 20,
-                            }}
-                        >
-                            {topItems.length === 0 ? (
+                        <View style={{
+                            backgroundColor: COLORS.card,
+                            borderRadius: 16,
+                            padding: 20,
+                            borderWidth: 1,
+                            borderColor: COLORS.border,
+                            marginBottom: 16,
+                        }}>
+                            <View style={{ marginBottom: 16 }}>
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                        <Text style={{ fontSize: 16, marginRight: 8 }}>💵</Text>
+                                        <Text style={{ fontSize: 14, fontWeight: '500', color: COLORS.text }}>
+                                            Cash Sales
+                                        </Text>
+                                    </View>
+                                    <Text style={{ fontSize: 14, fontWeight: '600', color: COLORS.success }}>
+                                        {transactionCounts.cash} ({getPercentage(transactionCounts.cash)}%)
+                                    </Text>
+                                </View>
+                                <View style={{
+                                    height: 8,
+                                    backgroundColor: COLORS.border,
+                                    borderRadius: 4,
+                                    overflow: 'hidden',
+                                }}>
+                                    <View style={{
+                                        height: '100%',
+                                        width: `${getPercentage(transactionCounts.cash)}%`,
+                                        backgroundColor: COLORS.success,
+                                        borderRadius: 4,
+                                    }} />
+                                </View>
+                            </View>
+
+                            <View style={{ marginBottom: 16 }}>
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                        <Text style={{ fontSize: 16, marginRight: 8 }}>🏦</Text>
+                                        <Text style={{ fontSize: 14, fontWeight: '500', color: COLORS.text }}>
+                                            Payments Received
+                                        </Text>
+                                    </View>
+                                    <Text style={{ fontSize: 14, fontWeight: '600', color: COLORS.primary }}>
+                                        {transactionCounts.payment} ({getPercentage(transactionCounts.payment)}%)
+                                    </Text>
+                                </View>
+                                <View style={{
+                                    height: 8,
+                                    backgroundColor: COLORS.border,
+                                    borderRadius: 4,
+                                    overflow: 'hidden',
+                                }}>
+                                    <View style={{
+                                        height: '100%',
+                                        width: `${getPercentage(transactionCounts.payment)}%`,
+                                        backgroundColor: COLORS.primary,
+                                        borderRadius: 4,
+                                    }} />
+                                </View>
+                            </View>
+
+                            <View style={{ marginBottom: 16 }}>
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                        <Text style={{ fontSize: 16, marginRight: 8 }}>🤝</Text>
+                                        <Text style={{ fontSize: 14, fontWeight: '500', color: COLORS.text }}>
+                                            Udhar (Credit)
+                                        </Text>
+                                    </View>
+                                    <Text style={{ fontSize: 14, fontWeight: '600', color: COLORS.warning }}>
+                                        {transactionCounts.credit} ({getPercentage(transactionCounts.credit)}%)
+                                    </Text>
+                                </View>
+                                <View style={{
+                                    height: 8,
+                                    backgroundColor: COLORS.border,
+                                    borderRadius: 4,
+                                    overflow: 'hidden',
+                                }}>
+                                    <View style={{
+                                        height: '100%',
+                                        width: `${getPercentage(transactionCounts.credit)}%`,
+                                        backgroundColor: COLORS.warning,
+                                        borderRadius: 4,
+                                    }} />
+                                </View>
+                            </View>
+
+                            <View>
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                        <Text style={{ fontSize: 16, marginRight: 8 }}>💸</Text>
+                                        <Text style={{ fontSize: 14, fontWeight: '500', color: COLORS.text }}>
+                                            Expenses
+                                        </Text>
+                                    </View>
+                                    <Text style={{ fontSize: 14, fontWeight: '600', color: COLORS.danger }}>
+                                        {transactionCounts.expense} ({getPercentage(transactionCounts.expense)}%)
+                                    </Text>
+                                </View>
+                                <View style={{
+                                    height: 8,
+                                    backgroundColor: COLORS.border,
+                                    borderRadius: 4,
+                                    overflow: 'hidden',
+                                }}>
+                                    <View style={{
+                                        height: '100%',
+                                        width: `${getPercentage(transactionCounts.expense)}%`,
+                                        backgroundColor: COLORS.danger,
+                                        borderRadius: 4,
+                                    }} />
+                                </View>
+                            </View>
+                        </View>
+
+                        {/* Top 5 Customers by Udhar */}
+                        <Text style={{
+                            fontSize: 12,
+                            fontWeight: '700',
+                            color: COLORS.textMuted,
+                            letterSpacing: 1,
+                            marginBottom: 12,
+                            marginTop: 8,
+                        }}>
+                            TOP 5 CUSTOMERS BY UDHAR
+                        </Text>
+
+                        <View style={{
+                            backgroundColor: COLORS.card,
+                            borderRadius: 16,
+                            borderWidth: 1,
+                            borderColor: COLORS.border,
+                            overflow: 'hidden',
+                            marginBottom: 20,
+                        }}>
+                            {topCustomersByUdhar.length === 0 ? (
                                 <View style={{ padding: 24, alignItems: 'center' }}>
-                                    <Text style={{ color: COLORS.textMuted }}>
-                                        No transactions this period
+                                    <Text style={{ fontSize: 16, marginBottom: 8 }}>🎉</Text>
+                                    <Text style={{ color: COLORS.textMuted, textAlign: 'center' }}>
+                                        No outstanding udhar amounts
                                     </Text>
                                 </View>
                             ) : (
-                                topItems.map((item, i) => (
+                                topCustomersByUdhar.map((customer, i) => (
                                     <View
-                                        key={item.label}
+                                        key={customer.name}
                                         style={{
                                             flexDirection: 'row',
                                             justifyContent: 'space-between',
-                                            paddingVertical: 14,
-                                            paddingHorizontal: 16,
-                                            borderBottomWidth: i < topItems.length - 1 ? 1 : 0,
+                                            alignItems: 'center',
+                                            paddingVertical: 16,
+                                            paddingHorizontal: 20,
+                                            borderBottomWidth: i < topCustomersByUdhar.length - 1 ? 1 : 0,
                                             borderBottomColor: COLORS.border,
                                         }}
                                     >
-                                        <Text style={{ fontSize: 14, fontWeight: '500', color: COLORS.text }}>
-                                            {item.label}
-                                        </Text>
-                                        <Text style={{ fontSize: 13, color: COLORS.success, fontWeight: '600' }}>
-                                            {item.units} units · {formatCurrency(item.revenue)}
+                                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                            <Text style={{ fontSize: 16, marginRight: 12 }}>
+                                                {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '👤'}
+                                            </Text>
+                                            <View>
+                                                <Text style={{ fontSize: 14, fontWeight: '600', color: COLORS.text }}>
+                                                    {customer.name}
+                                                </Text>
+                                                <Text style={{ fontSize: 12, color: COLORS.textMuted }}>
+                                                    Outstanding balance
+                                                </Text>
+                                            </View>
+                                        </View>
+                                        <Text style={{ fontSize: 16, fontWeight: '700', color: COLORS.danger }}>
+                                            {formatCurrency(customer.amount)}
                                         </Text>
                                     </View>
                                 ))
@@ -331,7 +636,6 @@ export default function ReportsScreen({ navigation }: ReportsScreenProps) {
                         </View>
                     </>
                 )}
-                <View style={{ height: 40 }} />
             </ScrollView>
         </View>
     );

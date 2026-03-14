@@ -85,13 +85,15 @@ export const useAppStore = create<AppState>()(
                         todaySales += txn.price;
                     }
 
-                    // Total udhar (all credit transactions)
+                    // Total udhar (credit adds, cash/udhar_payment subtracts)
                     if (txn.type === 'credit') {
                         totalUdhar += txn.price;
+                    } else if (txn.type === 'cash' || txn.type === 'udhar_payment') {
+                        totalUdhar -= txn.price;
                     }
 
-                    // This week total
-                    if (txnDate >= weekStart) {
+                    // This week total (only cash and credit, not expenses)
+                    if (txnDate >= weekStart && (txn.type === 'cash' || txn.type === 'credit')) {
                         thisWeek += txn.price;
                     }
                 });

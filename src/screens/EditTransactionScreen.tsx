@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
     View,
     Text,
@@ -14,10 +14,11 @@ import {
 } from 'react-native';
 import * as Contacts from 'expo-contacts';
 import { COLORS } from '../constants';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { updateTransaction, deleteTransaction } from '../api/transactions';
+import { getCustomers } from '../api/customers';
 import { useAppStore } from '../store/useAppStore';
-import type { Transaction } from '../types';
+import type { Customer, Transaction } from '../types';
 import i18n from '../i18n';
 
 interface EditTransactionScreenProps {
@@ -39,44 +40,112 @@ export default function EditTransactionScreen({ navigation, route }: EditTransac
     const [type, setType] = useState<'cash' | 'credit' | 'expense'>(transaction.type as 'cash' | 'credit' | 'expense');
     const [date, setDate] = useState(transaction.date ? new Date(transaction.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]);
     const [phoneNumber, setPhoneNumber] = useState(transaction.customerPhone || '');
-    const [showContactPicker, setShowContactPicker] = useState(false);
-    const [contacts, setContacts] = useState<any[]>([]);
+    const [showSuggestions, setShowSuggestions] = useState(false);
+    const selectionMadeRef = useRef(false);
+    
+    // Phone contacts
+    const [showPhoneContacts, setShowPhoneContacts] = useState(false);
+    const [phoneContacts, setPhoneContacts] = useState<any[]>([]);
+    const [filteredPhoneContacts, setFilteredPhoneContacts] = useState<any[]>([]);
+    const [phoneContactSearch, setPhoneContactSearch] = useState('');
+    const [isLoadingPhoneContacts, setIsLoadingPhoneContacts] = useState(false);
+    const [phonePermissionDenied, setPhonePermissionDenied] = useState(false);
 
     const queryClient = useQueryClient();
 
-    const pickContact = async () => {
+    const { data: customersResponse, isLoading: isLoadingCustomers } = useQuery({
+        queryKey: ['customers', businessId],
+        queryFn: () => getCustomers(businessId || undefined),
+        enabled: !!businessId,
+    });
+
+    const customers = customersResponse?.data || [];
+
+    const suggestions = customer.trim() 
+        ? customers.filter(c => 
+            c.name.toLowerCase().includes(customer.toLowerCase())
+          ).slice(0, 5)
+        : [];
+
+    const handleSelectCustomer = (selectedCustomer: Customer) => {
+        selectionMadeRef.current = true;
+        setCustomer(selectedCustomer.name);
+        if (selectedCustomer.phone) {
+            setPhoneNumber(selectedCustomer.phone);
+        }
+        setShowSuggestions(false);
+    };
+
+    // Phone contacts functions
+    const pickFromPhoneContacts = async () => {
+        setIsLoadingPhoneContacts(true);
+        setPhonePermissionDenied(false);
+        setPhoneContacts([]);
+        setFilteredPhoneContacts([]);
+        setPhoneContactSearch('');
+        
         try {
+            // Step 1: Request permission first
             const { status } = await Contacts.requestPermissionsAsync();
+            
             if (status !== 'granted') {
-                Alert.alert('Permission Required', 'Please grant contacts permission to pick from phonebook');
+                setIsLoadingPhoneContacts(false);
+                Alert.alert(
+                    'Permission Required',
+                    'Please grant contacts permission to import from phonebook.',
+                    [
+                        { text: 'Cancel', style: 'cancel' },
+                        { text: 'Open Settings', onPress: () => {}}
+                    ]
+                );
                 return;
             }
 
+            // Step 2: Show loading modal
+            setShowPhoneContacts(true);
+
+            // Step 3: Load contacts
             const result = await Contacts.getContactsAsync({
                 fields: [Contacts.Fields.Name, Contacts.Fields.PhoneNumbers],
-                pageSize: 50, // Get more contacts for selection
+                pageSize: 500,
             });
             
-            if (result.data.length > 0) {
-                setContacts(result.data);
-                setShowContactPicker(true);
-            } else {
-                Alert.alert('No Contacts', 'No contacts found in your phonebook');
-            }
+            const contactsWithPhone = result.data.filter((c: any) => c.phoneNumbers && c.phoneNumbers.length > 0);
+            
+            // Step 4: Store contacts
+            setPhoneContacts(contactsWithPhone);
+            setFilteredPhoneContacts(contactsWithPhone);
         } catch (error) {
-            console.error('Error picking contact:', error);
-            Alert.alert('Error', 'Failed to pick contact');
+            console.error('Error loading phone contacts:', error);
+            Alert.alert('Error', 'Failed to load phone contacts');
+            setShowPhoneContacts(false);
+        } finally {
+            setIsLoadingPhoneContacts(false);
         }
     };
 
-    const selectContact = (contact: any) => {
+    const selectPhoneContact = (contact: any) => {
         const name = contact.name || '';
         const phone = contact.phoneNumbers?.[0]?.number || '';
         
         if (name) setCustomer(name);
-        if (phone) setPhoneNumber(phone.replace(/\D/g, '')); // Remove non-digits
+        if (phone) setPhoneNumber(phone.replace(/\D/g, ''));
         
-        setShowContactPicker(false);
+        setShowPhoneContacts(false);
+        setPhoneContactSearch('');
+    };
+
+    const handlePhoneContactSearch = (query: string) => {
+        setPhoneContactSearch(query);
+        if (!query.trim()) {
+            setFilteredPhoneContacts(phoneContacts);
+            return;
+        }
+        
+        const filtered = phoneContacts.filter(contact => 
+            contact.name?.toLowerCase().includes(query.toLowerCase())
+        );
+        setFilteredPhoneContacts(filtered);
     };
 
     const updateMutation = useMutation({
@@ -173,6 +242,7 @@ export default function EditTransactionScreen({ navigation, route }: EditTransac
             <ScrollView
                 style={{ flex: 1, paddingHorizontal: 20 }}
                 showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
             >
                 {/* Transaction Type */}
                 <Text
@@ -243,23 +313,126 @@ export default function EditTransactionScreen({ navigation, route }: EditTransac
                 >
                     {i18n.t('review.customerName')}
                 </Text>
-                <TextInput
-                    value={customer}
-                    onChangeText={setCustomer}
-                    placeholder="e.g. Raja Kumar"
-                    placeholderTextColor={COLORS.textMuted}
-                    style={{
-                        backgroundColor: COLORS.card,
-                        borderRadius: 10,
-                        borderWidth: 1,
-                        borderColor: COLORS.border,
-                        paddingHorizontal: 16,
-                        paddingVertical: 14,
-                        fontSize: 15,
-                        color: COLORS.text,
-                        marginBottom: 12,
-                    }}
-                />
+                <View style={{ zIndex: 100, position: 'relative' }}>
+                    <TextInput
+                        value={customer}
+                        onChangeText={(text) => {
+                            setCustomer(text);
+                            setShowSuggestions(true);
+                        }}
+                        onFocus={() => setShowSuggestions(true)}
+                        onBlur={() => {
+                            // Delay to check if selection was made
+                            setTimeout(() => {
+                                if (!selectionMadeRef.current) {
+                                    setShowSuggestions(false);
+                                }
+                                selectionMadeRef.current = false;
+                            }, 150);
+                        }}
+                        autoCapitalize="words"
+                        placeholder="e.g. Raja Kumar"
+                        placeholderTextColor={COLORS.textMuted}
+                        style={{
+                            backgroundColor: COLORS.card,
+                            borderRadius: 10,
+                            borderWidth: 1,
+                            borderColor: COLORS.border,
+                            paddingHorizontal: 16,
+                            paddingVertical: 14,
+                            fontSize: 15,
+                            color: COLORS.text,
+                            marginBottom: 12,
+                            paddingRight: 50,
+                        }}
+                    />
+                    
+                    {/* Phone Contacts Button */}
+                    <TouchableOpacity
+                        onPress={pickFromPhoneContacts}
+                        style={{
+                            position: 'absolute',
+                            right: 12,
+                            top: 10,
+                            width: 36,
+                            height: 36,
+                            borderRadius: 18,
+                            backgroundColor: COLORS.primary + '20',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                        }}
+                    >
+                        <Text style={{ fontSize: 18 }}>📱</Text>
+                    </TouchableOpacity>
+                    
+                    {showSuggestions && customer.trim().length > 0 && (
+                        <View style={{
+                            position: 'absolute',
+                            top: 52,
+                            left: 0,
+                            right: 0,
+                            backgroundColor: COLORS.card,
+                            borderWidth: 1,
+                            borderColor: COLORS.border,
+                            borderRadius: 10,
+                            maxHeight: 250,
+                            zIndex: 1000,
+                            elevation: 5,
+                            shadowColor: '#000',
+                            shadowOffset: { width: 0, height: 4 },
+                            shadowOpacity: 0.2,
+                            shadowRadius: 8,
+                        }}>
+                            {isLoadingCustomers ? (
+                                <View style={{ padding: 16, alignItems: 'center' }}>
+                                    <ActivityIndicator size="small" color={COLORS.primary} />
+                                </View>
+                            ) : suggestions.length > 0 ? (
+                                <ScrollView bounces={false}>
+                                    {suggestions.map((suggestion) => (
+                                        <TouchableOpacity
+                                            key={suggestion.id}
+                                            onPress={() => handleSelectCustomer(suggestion)}
+                                            style={{
+                                                paddingHorizontal: 16,
+                                                paddingVertical: 14,
+                                                borderBottomWidth: 1,
+                                                borderBottomColor: COLORS.border + '50',
+                                            }}
+                                        >
+                                            <Text style={{ fontSize: 16, fontWeight: '500', color: COLORS.text }}>
+                                                {suggestion.name}
+                                            </Text>
+                                            {suggestion.phone && (
+                                                <Text style={{ fontSize: 13, color: COLORS.textMuted, marginTop: 2 }}>
+                                                    {suggestion.phone}
+                                                </Text>
+                                            )}
+                                        </TouchableOpacity>
+                                    ))}
+                                </ScrollView>
+                            ) : (
+                                <TouchableOpacity
+                                    onPress={() => {
+                                        selectionMadeRef.current = true;
+                                        setShowSuggestions(false);
+                                    }}
+                                    style={{ 
+                                        padding: 16, 
+                                        flexDirection: 'row', 
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                    }}
+                                >
+                                    <Text style={{ fontSize: 20, marginRight: 8 }}>➕</Text>
+                                    <Text style={{ fontSize: 15, color: COLORS.primary, fontWeight: '600' }}>
+                                        Create "{customer}"
+                                    </Text>
+                                </TouchableOpacity>
+                            )}
+                        </View>
+                    )}
+                </View>
 
                 {/* Phone Number */}
                 <Text
@@ -272,7 +445,7 @@ export default function EditTransactionScreen({ navigation, route }: EditTransac
                 >
                     {i18n.t('manualEntry.phoneNumber')} (Optional)
                 </Text>
-                <View style={{ flexDirection: 'row', marginBottom: 20 }}>
+                <View style={{ marginBottom: 20 }}>
                     <TextInput
                         value={phoneNumber}
                         onChangeText={setPhoneNumber}
@@ -280,7 +453,6 @@ export default function EditTransactionScreen({ navigation, route }: EditTransac
                         placeholderTextColor={COLORS.textMuted}
                         keyboardType="phone-pad"
                         style={{
-                            flex: 1,
                             backgroundColor: COLORS.card,
                             borderRadius: 10,
                             borderWidth: 1,
@@ -289,22 +461,8 @@ export default function EditTransactionScreen({ navigation, route }: EditTransac
                             paddingVertical: 14,
                             fontSize: 15,
                             color: COLORS.text,
-                            marginRight: 8,
                         }}
                     />
-                    <TouchableOpacity
-                        onPress={pickContact}
-                        style={{
-                            backgroundColor: COLORS.primary,
-                            borderRadius: 10,
-                            paddingHorizontal: 16,
-                            paddingVertical: 14,
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                        }}
-                    >
-                        <Text style={{ color: COLORS.white, fontSize: 16 }}>📱</Text>
-                    </TouchableOpacity>
                 </View>
 
                 {/* Item Name */}
@@ -432,12 +590,15 @@ export default function EditTransactionScreen({ navigation, route }: EditTransac
                 </TouchableOpacity>
             </View>
 
-            {/* Contact Picker Modal */}
+            {/* Phone Contacts Modal */}
             <Modal
-                visible={showContactPicker}
+                visible={showPhoneContacts}
                 transparent
                 animationType="slide"
-                onRequestClose={() => setShowContactPicker(false)}
+                onRequestClose={() => {
+                    setShowPhoneContacts(false);
+                    setPhoneContactSearch('');
+                }}
             >
                 <View style={{ 
                     flex: 1, 
@@ -450,7 +611,7 @@ export default function EditTransactionScreen({ navigation, route }: EditTransac
                         backgroundColor: COLORS.background,
                         borderRadius: 20,
                         width: '100%',
-                        maxHeight: '70%',
+                        maxHeight: '80%',
                         shadowColor: '#000',
                         shadowOffset: { width: 0, height: 10 },
                         shadowOpacity: 0.3,
@@ -469,22 +630,107 @@ export default function EditTransactionScreen({ navigation, route }: EditTransac
                             borderTopRightRadius: 20,
                         }}>
                             <Text style={{ fontSize: 18, fontWeight: '700', color: COLORS.text }}>
-                                Select Contact
+                                Import from Phone
                             </Text>
-                            <TouchableOpacity onPress={() => setShowContactPicker(false)}>
+                            <TouchableOpacity onPress={() => {
+                                setShowPhoneContacts(false);
+                                setPhoneContactSearch('');
+                            }}>
                                 <Text style={{ fontSize: 24, color: COLORS.textMuted }}>✕</Text>
                             </TouchableOpacity>
                         </View>
 
-                        {/* Contact List */}
+                        {/* Search Bar */}
+                        {!phonePermissionDenied && !isLoadingPhoneContacts && phoneContacts.length > 0 && (
+                            <View style={{
+                                paddingHorizontal: 16,
+                                paddingVertical: 12,
+                                borderBottomWidth: 1,
+                                borderBottomColor: COLORS.border,
+                            }}>
+                                <View style={{
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    backgroundColor: COLORS.card,
+                                    borderRadius: 10,
+                                    paddingHorizontal: 12,
+                                    paddingVertical: 8,
+                                }}>
+                                    <Text style={{ fontSize: 16, marginRight: 8 }}>🔍</Text>
+                                    <TextInput
+                                        style={{
+                                            flex: 1,
+                                            fontSize: 15,
+                                            color: COLORS.text,
+                                        }}
+                                        placeholder="Search contacts..."
+                                        placeholderTextColor={COLORS.textMuted}
+                                        value={phoneContactSearch}
+                                        onChangeText={handlePhoneContactSearch}
+                                    />
+                                    {phoneContactSearch.length > 0 && (
+                                        <TouchableOpacity onPress={() => handlePhoneContactSearch('')}>
+                                            <Text style={{ fontSize: 18, color: COLORS.textMuted }}>✕</Text>
+                                        </TouchableOpacity>
+                                    )}
+                                </View>
+                            </View>
+                        )}
+
+                        {/* Content */}
                         <ScrollView 
-                            style={{ flex: 1 }}
+                            style={{ maxHeight: 350 }}
                             contentContainerStyle={{ paddingBottom: 20 }}
                         >
-                            {contacts.map((contact, index) => (
+                            {/* Loading State */}
+                            {isLoadingPhoneContacts && (
+                                <View style={{ padding: 40, alignItems: 'center' }}>
+                                    <ActivityIndicator size="large" color={COLORS.primary} />
+                                    <Text style={{ marginTop: 16, color: COLORS.textMuted, fontSize: 14 }}>
+                                        Loading contacts...
+                                    </Text>
+                                </View>
+                            )}
+
+                            {/* Permission Denied */}
+                            {!isLoadingPhoneContacts && phonePermissionDenied && (
+                                <View style={{ padding: 40, alignItems: 'center' }}>
+                                    <Text style={{ fontSize: 48, marginBottom: 16 }}>🔒</Text>
+                                    <Text style={{ fontSize: 16, fontWeight: '600', color: COLORS.text, marginBottom: 8 }}>
+                                        Permission Required
+                                    </Text>
+                                    <Text style={{ fontSize: 14, color: COLORS.textMuted, textAlign: 'center', marginBottom: 20 }}>
+                                        Please grant contacts permission in your device settings
+                                    </Text>
+                                    <TouchableOpacity
+                                        onPress={() => setShowPhoneContacts(false)}
+                                        style={{
+                                            backgroundColor: COLORS.primary,
+                                            paddingHorizontal: 20,
+                                            paddingVertical: 12,
+                                            borderRadius: 10,
+                                        }}
+                                    >
+                                        <Text style={{ color: COLORS.white, fontWeight: '600' }}>Close</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            )}
+
+                            {/* Empty State */}
+                            {!isLoadingPhoneContacts && !phonePermissionDenied && filteredPhoneContacts.length === 0 && (
+                                <View style={{ padding: 40, alignItems: 'center' }}>
+                                    <Text style={{ fontSize: 48, marginBottom: 16 }}>📭</Text>
+                                    <Text style={{ fontSize: 16, color: COLORS.textMuted }}>
+                                        {phoneContactSearch.length > 0 ? 'No contacts found' : 'No contacts available'}
+                                    </Text>
+                                </View>
+                            )}
+
+                            {/* Contact List */}
+                            {!isLoadingPhoneContacts && !phonePermissionDenied && filteredPhoneContacts.map((contact, index) => (
                                 <TouchableOpacity
                                     key={index}
-                                    onPress={() => selectContact(contact)}
+                                    onPress={() => selectPhoneContact(contact)}
                                     style={{
                                         flexDirection: 'row',
                                         alignItems: 'center',

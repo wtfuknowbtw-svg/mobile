@@ -26,7 +26,6 @@ export default function ReviewOCRScreen({ navigation, route }: ReviewOCRScreenPr
     const { businessId } = useAppStore();
     const { receiptData, imageUrl } = route.params || {};
     
-    const [isEditMode, setIsEditMode] = useState(false);
     const [parsedData, setParsedData] = useState({
         customer: receiptData?.customer_name || receiptData?.customerName || 'Unknown Customer',
         date: receiptData?.date || new Date().toLocaleDateString(),
@@ -36,6 +35,7 @@ export default function ReviewOCRScreen({ navigation, route }: ReviewOCRScreenPr
     });
 
     const confidence = receiptData?.confidence || receiptData?.aiConfidence || 90;
+    const rawText = receiptData?.raw_text || receiptData?.rawText || '';
     const queryClient = useQueryClient();
 
     const mutation = useMutation({
@@ -84,7 +84,6 @@ export default function ReviewOCRScreen({ navigation, route }: ReviewOCRScreenPr
         value, 
         onChangeText, 
         keyboardType = 'default',
-        editable = isEditMode,
         isAmount = false 
     }: {
         icon: string;
@@ -92,7 +91,6 @@ export default function ReviewOCRScreen({ navigation, route }: ReviewOCRScreenPr
         value: string;
         onChangeText: (text: string) => void;
         keyboardType?: 'default' | 'numeric';
-        editable?: boolean;
         isAmount?: boolean;
     }) => (
         <View style={{ marginBottom: 16 }}>
@@ -111,8 +109,8 @@ export default function ReviewOCRScreen({ navigation, route }: ReviewOCRScreenPr
                 alignItems: 'center',
                 backgroundColor: COLORS.card,
                 borderRadius: 12,
-                borderWidth: 1,
-                borderColor: editable ? COLORS.primary : COLORS.border,
+                borderWidth: 2,
+                borderColor: COLORS.primary,
                 paddingHorizontal: 16,
                 paddingVertical: 12,
             }}>
@@ -127,7 +125,7 @@ export default function ReviewOCRScreen({ navigation, route }: ReviewOCRScreenPr
                     value={value}
                     onChangeText={onChangeText}
                     keyboardType={keyboardType}
-                    editable={editable}
+                    editable={true}
                     placeholderTextColor={COLORS.textMuted}
                 />
                 {isAmount && (
@@ -159,8 +157,8 @@ export default function ReviewOCRScreen({ navigation, route }: ReviewOCRScreenPr
                 flexDirection: 'row',
                 backgroundColor: COLORS.card,
                 borderRadius: 12,
-                borderWidth: 1,
-                borderColor: COLORS.border,
+                borderWidth: 2,
+                borderColor: COLORS.primary,
                 padding: 4,
             }}>
                 {[
@@ -178,8 +176,7 @@ export default function ReviewOCRScreen({ navigation, route }: ReviewOCRScreenPr
                             borderRadius: 8,
                             backgroundColor: parsedData.type === type.value ? type.color : 'transparent',
                         }}
-                        onPress={() => isEditMode && setParsedData(prev => ({ ...prev, type: type.value }))}
-                        disabled={!isEditMode}
+                        onPress={() => setParsedData(prev => ({ ...prev, type: type.value }))}
                     >
                         <Text style={{ fontSize: 16, marginRight: 6 }}>{type.icon}</Text>
                         <Text style={{
@@ -222,23 +219,7 @@ export default function ReviewOCRScreen({ navigation, route }: ReviewOCRScreenPr
                         AI-powered data extraction
                     </Text>
                 </View>
-                <TouchableOpacity 
-                    onPress={() => setIsEditMode(!isEditMode)}
-                    style={{
-                        paddingHorizontal: 12,
-                        paddingVertical: 6,
-                        backgroundColor: isEditMode ? COLORS.primary : '#f1f3f5',
-                        borderRadius: 20,
-                    }}
-                >
-                    <Text style={{
-                        fontSize: 12,
-                        fontWeight: '600',
-                        color: isEditMode ? COLORS.white : COLORS.text,
-                    }}>
-                        {isEditMode ? 'Done' : 'Edit'}
-                    </Text>
-                </TouchableOpacity>
+                <View style={{ width: 60 }} />
             </View>
 
             <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
@@ -282,6 +263,28 @@ export default function ReviewOCRScreen({ navigation, route }: ReviewOCRScreenPr
                     </View>
                 </View>
 
+                {/* Warning Banner for Low Confidence */}
+                {confidence < 70 && (
+                    <View style={{
+                        backgroundColor: '#fff3cd',
+                        borderLeftWidth: 4,
+                        borderLeftColor: '#ffc107',
+                        marginHorizontal: 20,
+                        marginTop: 12,
+                        marginBottom: 0,
+                        padding: 12,
+                        borderRadius: 8,
+                    }}>
+                        <Text style={{
+                            fontSize: 13,
+                            color: '#856404',
+                            fontWeight: '600',
+                        }}>
+                            ⚠️ AI wasn't fully sure — please review all fields carefully
+                        </Text>
+                    </View>
+                )}
+
                 {/* Form Card */}
                 <View style={{
                     backgroundColor: '#ffffff',
@@ -294,6 +297,35 @@ export default function ReviewOCRScreen({ navigation, route }: ReviewOCRScreenPr
                     shadowRadius: 8,
                     elevation: 3,
                 }}>
+                    {/* AI Read Raw Text — at top of card */}
+                    {rawText ? (
+                        <View style={{
+                            backgroundColor: '#f4f5f7',
+                            borderRadius: 10,
+                            padding: 12,
+                            marginBottom: 20,
+                        }}>
+                            <Text style={{
+                                fontSize: 11,
+                                fontWeight: '700',
+                                color: COLORS.textMuted,
+                                marginBottom: 6,
+                                textTransform: 'uppercase',
+                                letterSpacing: 0.8,
+                            }}>
+                                AI Read:
+                            </Text>
+                            <Text style={{
+                                fontSize: 13,
+                                color: '#555',
+                                lineHeight: 19,
+                                fontStyle: 'italic',
+                            }}>
+                                {rawText}
+                            </Text>
+                        </View>
+                    ) : null}
+
                     <InputField
                         icon="👤"
                         label="Customer Name"

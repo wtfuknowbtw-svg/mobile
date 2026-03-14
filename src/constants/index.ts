@@ -27,10 +27,7 @@ export const FONTS = {
     bold: 'System',
 } as const;
 
-export const API_BASE_URL = process.env.NODE_ENV === 'development'
-    // Using production backend for testing
-    ? 'https://apnabackend-theta.vercel.app/api'
-    : 'https://apnabackend-theta.vercel.app/api';
+export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://apnabackend-theta.vercel.app/api';
 
 export const SUPPORTED_LANGUAGES = [
     { code: 'hi', label: 'हिंदी', labelEn: 'Hindi', flag: 'IN' },
