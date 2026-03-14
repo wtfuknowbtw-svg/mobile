@@ -159,29 +159,6 @@ export default function OTPLoginScreen({ navigation }: OTPLoginScreenProps) {
                             <Text
                                 style={{
                                     fontSize: 16,
-                                    color: COLORS.textMuted,
-                                    marginRight: 8,
-                                    fontWeight: '600',
-                                }}
-                            >
-                                MOBILE NUMBER
-                            </Text>
-                        </View>
-                        <View
-                            style={{
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                                backgroundColor: COLORS.card,
-                                borderRadius: 12,
-                                borderWidth: 1,
-                                borderColor: COLORS.border,
-                                paddingHorizontal: 16,
-                                marginBottom: 24,
-                            }}
-                        >
-                            <Text
-                                style={{
-                                    fontSize: 16,
                                     color: COLORS.text,
                                     marginRight: 8,
                                     fontWeight: '600',
@@ -246,20 +223,6 @@ export default function OTPLoginScreen({ navigation }: OTPLoginScreenProps) {
                                     Send OTP →
                                 </Text>
                             )}
-                        </TouchableOpacity>
-
-                        {/* Bypass for testing */}
-                        <TouchableOpacity
-                            onPress={() => {
-                                setPhone('9999999999');
-                                setOtp(['0', '0', '0', '0', '0', '0']);
-                                setOtpSent(true);
-                            }}
-                            style={{ marginTop: 20, alignItems: 'center' }}
-                        >
-                            <Text style={{ color: COLORS.textMuted, fontSize: 13, fontWeight: '500' }}>
-                                🧪 Test Mode: Skip to OTP
-                            </Text>
                         </TouchableOpacity>
                     </>
                 ) : (

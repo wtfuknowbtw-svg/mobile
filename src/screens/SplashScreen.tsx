@@ -122,8 +122,8 @@ export default function SplashScreen({ navigation }: SplashScreenProps) {
                             marginBottom: 12,
                         }}
                     >
-                        <Text style={{ color: COLORS.success }}>Khata</Text>
-                        <Text style={{ color: COLORS.orange }}>AI</Text>
+                        <Text style={{ color: COLORS.success }}>Apna</Text>
+                        <Text style={{ color: COLORS.orange }}>Khata</Text>
                     </Text>
 
                     <Text

@@ -182,8 +182,8 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                     <Text style={{ fontSize: 13, marginRight: 8 }}>📒</Text>
                     <Text style={{ fontSize: 22, fontWeight: '800', color: COLORS.text }}>
-                        <Text style={{ color: COLORS.success }}>Khata</Text>
-                        <Text style={{ color: COLORS.orange }}>AI</Text>
+                        <Text style={{ color: COLORS.success }}>Apna</Text>
+                        <Text style={{ color: COLORS.orange }}>Khata</Text>
                     </Text>
                 </View>
                 <View style={{ flexDirection: 'row', gap: 12 }}>
