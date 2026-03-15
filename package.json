@@ -25,7 +25,6 @@
     "expo-image-picker": "~16.0.6",
     "expo-localization": "~16.0.1",
     "expo-speech": "~13.0.1",
-    "expo-speech-recognition": "^3.1.1",
     "expo-status-bar": "~2.0.1",
     "i18n-js": "^4.4.3",
     "make-plural": "^8.1.0",
