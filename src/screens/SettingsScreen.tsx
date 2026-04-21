@@ -64,7 +64,7 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
             icon: '💳',
             label: i18n.t('settings.subscription'),
             subtitle: i18n.t('settings.freePlan'),
-            action: () => Alert.alert('Free Plan', 'You are on the free plan. Upgrade coming soon!'),
+            action: () => navigation.navigate('Subscription'),
         },
         {
             icon: '💬',

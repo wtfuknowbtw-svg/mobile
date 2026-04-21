@@ -83,6 +83,7 @@ export type RootStackParamList = {
     EditTransaction: { transaction: Transaction };
     UdharPayment: undefined;
     BusinessProfile: undefined;
+    Subscription: undefined;
 };
 
 export type MainTabParamList = {

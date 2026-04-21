@@ -16,6 +16,8 @@ import { useQuery } from '@tanstack/react-query';
 import { getTransactions } from '../api/transactions';
 import type { Transaction } from '../types';
 import i18n from '../i18n';
+import UpgradeBanner from '../components/UpgradeBanner';
+import { useSubscription } from '../hooks/useSubscription';
 
 interface ReportsScreenProps {
     navigation: any;
@@ -23,6 +25,7 @@ interface ReportsScreenProps {
 
 export default function ReportsScreen({ navigation }: ReportsScreenProps) {
     const { businessId } = useAppStore();
+    const { isFreePlan } = useSubscription();
 
     const { data: txnsResponse, isLoading } = useQuery({
         queryKey: ['transactions', businessId],
@@ -327,6 +330,18 @@ export default function ReportsScreen({ navigation }: ReportsScreenProps) {
                                 <Text style={{ color: COLORS.white, fontWeight: '700', fontSize: 13 }}>Share Now</Text>
                             </TouchableOpacity>
                         </View>
+
+                        {/* Upgrade banner for free users */}
+                        {isFreePlan && (
+                            <View style={{ marginHorizontal: -20 }}>
+                                <UpgradeBanner
+                                    compact
+                                    feature="reports"
+                                    message="Upgrade for advanced reports & CSV export"
+                                    onUpgrade={() => navigation.navigate('Subscription')}
+                                />
+                            </View>
+                        )}
 
                         {/* Today's Sales */}
                         <View style={{

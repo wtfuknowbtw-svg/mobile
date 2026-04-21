@@ -1,4 +1,4 @@
-import { apiPost } from '../lib/apiClient';
+import { apiPost, apiUpload } from '../lib/apiClient';
 import type { Transaction } from '../types';
 
 export const processOCR = async (
@@ -65,5 +65,31 @@ export const processVoice = async (
     } catch (error) {
         console.error('Voice API error:', error);
         return { error: error instanceof Error ? error.message : 'Voice processing failed' };
+    }
+};
+export const processVoiceAudio = async (
+    audioUri: string,
+    language: string
+): Promise<any> => {
+    try {
+        const formData = new FormData();
+        
+        formData.append('file', {
+            uri: audioUri,
+            name: 'recording.m4a',
+            type: 'audio/m4a',
+        } as any);
+        formData.append('language', language);
+
+        const response = await apiUpload<any>('/ai/voice', formData);
+        
+        if (response.error) {
+            return { error: response.error };
+        }
+
+        return response.data;
+    } catch (error) {
+        console.error('Voice Upload error:', error);
+        return { error: error instanceof Error ? error.message : 'Voice upload failed' };
     }
 };

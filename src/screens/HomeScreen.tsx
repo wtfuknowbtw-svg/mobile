@@ -18,6 +18,8 @@ import { useQuery } from '@tanstack/react-query';
 import { getTransactions, deleteTransaction } from '../api/transactions';
 import type { Transaction } from '../types';
 import i18n from '../i18n';
+import UpgradeBanner from '../components/UpgradeBanner';
+import { useSubscription } from '../hooks/useSubscription';
 
 const { width } = Dimensions.get('window');
 
@@ -27,6 +29,7 @@ interface HomeScreenProps {
 
 export default function HomeScreen({ navigation }: HomeScreenProps) {
     const { dashboardStats, computeStats, businessId } = useAppStore();
+    const { isFreePlan, canAddTransaction, showLimitWarning } = useSubscription();
     const [showAddSheet, setShowAddSheet] = useState(false);
     const [selectedTxn, setSelectedTxn] = useState<Transaction | null>(null);
     const [showTxnDetails, setShowTxnDetails] = useState(false);
@@ -214,6 +217,16 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
                     </TouchableOpacity>
                 </View>
             </View>
+
+            {/* Upgrade Banner for free plan users */}
+            {isFreePlan && recentTransactions.length >= 40 && (
+                <UpgradeBanner
+                    compact
+                    feature="transactions"
+                    message="You're approaching the free plan limit (50 txns/mo)"
+                    onUpgrade={() => navigation.navigate('Subscription')}
+                />
+            )}
 
             {/* Stats Row */}
             <View

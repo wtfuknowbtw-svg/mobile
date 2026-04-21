@@ -109,3 +109,44 @@ export async function apiPut<T = any>(
 export async function apiDelete<T = any>(endpoint: string): Promise<{ data?: T; error?: string }> {
     return apiRequest<T>(endpoint, { method: 'DELETE' });
 }
+/**
+ * Upload request helper (FormData)
+ */
+export async function apiUpload<T = any>(
+    endpoint: string,
+    formData: FormData
+): Promise<{ data?: T; error?: string }> {
+    const token = getToken();
+    const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
+    
+    const headers: Record<string, string> = {};
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers,
+            body: formData,
+        });
+
+        const contentType = response.headers.get('content-type');
+        let data: any = {};
+        
+        if (contentType && contentType.includes('application/json')) {
+            data = await response.json();
+        } else {
+            const text = await response.text();
+            return { error: `Server error: ${text.substring(0, 100)}` };
+        }
+
+        if (!response.ok) {
+            return { error: data.error || `Upload failed (${response.status})` };
+        }
+
+        return { data };
+    } catch (error: any) {
+        return { error: error.message || 'Network error during upload' };
+    }
+}

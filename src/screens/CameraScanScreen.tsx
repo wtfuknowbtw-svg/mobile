@@ -17,6 +17,8 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import { processOCR } from '../api/ai';
 import i18n from '../i18n';
+import { useSubscription } from '../hooks/useSubscription';
+import UpgradeBanner from '../components/UpgradeBanner';
 
 const { width, height } = Dimensions.get('window');
 
@@ -46,6 +48,7 @@ export default function CameraScanScreen({ navigation }: CameraScanScreenProps) 
     const pulseAnim = useRef(new Animated.Value(1)).current;
     const scanLineAnim = useRef(new Animated.Value(0)).current;
     const glowAnim = useRef(new Animated.Value(0.3)).current;
+    const { isFreePlan, limits } = useSubscription();
 
     // Request gallery permissions on mount
     React.useEffect(() => {
@@ -360,6 +363,19 @@ export default function CameraScanScreen({ navigation }: CameraScanScreenProps) 
                     <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginTop: 2 }}>
                         {i18n.t('camera.positionDocument')}
                     </Text>
+                    {isFreePlan && (
+                        <View style={{
+                            backgroundColor: 'rgba(245, 158, 11, 0.15)',
+                            paddingHorizontal: 10,
+                            paddingVertical: 3,
+                            borderRadius: 8,
+                            marginTop: 4,
+                        }}>
+                            <Text style={{ fontSize: 10, color: '#FBBF24', fontWeight: '600' }}>
+                                Free: {limits.aiScansPerDay} AI scans/day
+                            </Text>
+                        </View>
+                    )}
                 </View>
 
                 <View style={{ width: 40 }} />
