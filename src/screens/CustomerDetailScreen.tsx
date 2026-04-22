@@ -20,6 +20,9 @@ import { createTransaction } from '../api/transactions';
 import { useAppStore } from '../store/useAppStore';
 import type { Transaction } from '../types';
 import { useSubscription } from '../context/SubscriptionContext';
+import { formatCurrency } from '../utils/currency';
+import { getInitialColor } from '../utils/ui';
+import { openWhatsAppReminder } from '../utils/whatsappHelper';
 
 interface CustomerDetailScreenProps {
     navigation: any;
@@ -54,7 +57,6 @@ export default function CustomerDetailScreen({ navigation, route }: CustomerDeta
 
     const totalUdhar = Math.max(0, totalCredit - totalCash);
 
-    const formatCurrency = (n: number) => `₹${n.toLocaleString('en-IN')}`;
 
     const formatDate = (dateStr: string) => {
         return new Date(dateStr).toLocaleDateString('en-IN', {
@@ -130,7 +132,7 @@ export default function CustomerDetailScreen({ navigation, route }: CustomerDeta
     };
 
     // WhatsApp Reminder
-    const sendWhatsAppReminder = async () => {
+    const sendWhatsAppReminder = () => {
         if (!customerPhone) {
             Alert.alert(
                 'No Phone Number',
@@ -140,29 +142,8 @@ export default function CustomerDetailScreen({ navigation, route }: CustomerDeta
             return;
         }
 
-        const phone = customerPhone.replace(/\D/g, '');
-        const phoneWithCountry = phone.startsWith('91') ? phone : `91${phone}`;
-        
-        const message = `Namasté ${customerName || 'Customer'} ji! 🙏\n${businessName || 'Humari shop'} ki taraf se yaad dila rahe hain.\n\nAapka baaki amount: ₹${totalUdhar.toLocaleString('en-IN')}\n\nJaldi payment kar dein. Shukriya! 🙏`;
-        
-        const encodedMessage = encodeURIComponent(message);
-        const whatsappUrl = `whatsapp://send?phone=${phoneWithCountry}&text=${encodedMessage}`;
-        const smsUrl = `sms:${phoneWithCountry}${Platform.OS === 'ios' ? '&' : '?'}body=${encodedMessage}`;
-
-        try {
-            const canOpenWhatsApp = await Linking.canOpenURL(whatsappUrl);
-            if (canOpenWhatsApp) {
-                await Linking.openURL(whatsappUrl);
-            } else {
-                // Fallback to SMS
-                await Linking.openURL(smsUrl);
-            }
-        } catch (error) {
-            // Last resort fallback to SMS if canOpenURL fails or errors
-            Linking.openURL(smsUrl).catch(() => {
-                Alert.alert('Error', 'Could not open WhatsApp or SMS app.');
-            });
-        }
+        const language = (useAppStore.getState().language as 'en' | 'hi') || 'en';
+        openWhatsAppReminder(customerPhone, customerName || 'Customer', businessName, totalUdhar, language);
     };
 
     return (
@@ -187,7 +168,7 @@ export default function CustomerDetailScreen({ navigation, route }: CustomerDeta
                         width: 40,
                         height: 40,
                         borderRadius: 20,
-                        backgroundColor: COLORS.primary,
+                        backgroundColor: getInitialColor(customerName || 'C'),
                         justifyContent: 'center',
                         alignItems: 'center',
                         marginRight: 12,

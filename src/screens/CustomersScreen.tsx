@@ -22,13 +22,16 @@ import type { Customer } from '../types';
 import i18n from '../i18n';
 import { useSubscription } from '../context/SubscriptionContext';
 import UsageProgressBar from '../components/UsageProgressBar';
+import { openWhatsAppReminder } from '../utils/whatsappHelper';
+import { formatCurrency } from '../utils/currency';
+import { getInitialColor } from '../utils/ui';
 
 interface CustomersScreenProps {
     navigation: any;
 }
 
 export default function CustomersScreen({ navigation }: CustomersScreenProps) {
-    const { businessId, business } = useAppStore();
+    const { businessId, business, language } = useAppStore();
     const businessName = business?.name || 'Humari shop';
     const { 
         plan, 
@@ -38,6 +41,7 @@ export default function CustomersScreen({ navigation }: CustomersScreenProps) {
         getUpgradeMessage,
         getUpgradeCTA 
     } = useSubscription();
+
     const [search, setSearch] = useState('');
     const [showAddModal, setShowAddModal] = useState(false);
     const [newName, setNewName] = useState('');
@@ -70,14 +74,6 @@ export default function CustomersScreen({ navigation }: CustomersScreenProps) {
     const udharCustomers = filtered.filter((c) => c.totalUdhar > 0);
     const regularCustomers = filtered.filter((c) => c.totalUdhar <= 0);
 
-    const formatCurrency = (n: number) => `₹${n.toLocaleString('en-IN')}`;
-
-    const getInitialColor = (name: string) => {
-        if (!name) return COLORS.primary;
-        const colors = [COLORS.danger, COLORS.primary, COLORS.success, COLORS.orange];
-        const code = name.charCodeAt(0);
-        return colors[isNaN(code) ? 0 : code % colors.length];
-    };
 
     const handleAddCustomer = () => {
         if (!newName.trim()) return;
@@ -86,39 +82,6 @@ export default function CustomersScreen({ navigation }: CustomersScreenProps) {
             phone: newPhone.trim() || undefined,
             businessId
         });
-    };
-
-    const sendWhatsAppReminder = async (customer: Customer) => {
-        if (!customer.phone) {
-            Alert.alert(
-                'No Phone Number',
-                'Please add customer\'s phone number first.',
-                [{ text: 'OK' }],
-            );
-            return;
-        }
-
-        const phone = customer.phone.replace(/\D/g, '');
-        const phoneWithCountry = phone.startsWith('91') ? phone : `91${phone}`;
-        
-        const message = `Namasté ${customer.name || 'Customer'} ji! 🙏\n${businessName || 'Humari shop'} ki taraf se yaad dila rahe hain.\n\nAapka baaki amount: ₹${(customer.totalUdhar || 0).toLocaleString('en-IN')}\n\nJaldi payment kar dein. Shukriya! 🙏`;
-        
-        const encodedMessage = encodeURIComponent(message);
-        const whatsappUrl = `whatsapp://send?phone=${phoneWithCountry}&text=${encodedMessage}`;
-        const smsUrl = `sms:${phoneWithCountry}${Platform.OS === 'ios' ? '&' : '?'}body=${encodedMessage}`;
-
-        try {
-            const canOpenWhatsApp = await Linking.canOpenURL(whatsappUrl);
-            if (canOpenWhatsApp) {
-                await Linking.openURL(whatsappUrl);
-            } else {
-                await Linking.openURL(smsUrl);
-            }
-        } catch (error) {
-            Linking.openURL(smsUrl).catch(() => {
-                Alert.alert('Error', 'Could not open WhatsApp or SMS app.');
-            });
-        }
     };
 
     const renderCustomerRow = (customer: Customer, showUdhar: boolean) => (
@@ -165,7 +128,13 @@ export default function CustomersScreen({ navigation }: CustomersScreenProps) {
             {showUdhar ? (
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                     <TouchableOpacity
-                        onPress={() => sendWhatsAppReminder(customer)}
+                        onPress={() => {
+                            if (customer.phone) {
+                                openWhatsAppReminder(customer.phone, customer.name, businessName, customer.totalUdhar, language as 'en' | 'hi');
+                            } else {
+                                Alert.alert('No Phone Number', 'This customer does not have a phone number saved.');
+                            }
+                        }}
                         style={{
                             padding: 10,
                             marginRight: 8,

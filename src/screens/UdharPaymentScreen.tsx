@@ -16,6 +16,7 @@ import { getCustomers } from '../api/customers';
 import { createTransaction } from '../api/transactions';
 import type { Customer } from '../types';
 import { useSubscription } from '../context/SubscriptionContext';
+import { formatCurrency } from '../utils/currency';
 
 interface UdharPaymentScreenProps {
     navigation: any;
@@ -63,7 +64,7 @@ export default function UdharPaymentScreen({ navigation }: UdharPaymentScreenPro
             return;
         }
         if (Number(amount) > selectedCustomer.totalUdhar) {
-            Alert.alert('Error', `Amount cannot exceed outstanding udhar (₹${selectedCustomer.totalUdhar})`);
+            Alert.alert('Error', `Amount cannot exceed outstanding udhar (${formatCurrency(selectedCustomer.totalUdhar)})`);
             return;
         }
 
@@ -205,7 +206,7 @@ export default function UdharPaymentScreen({ navigation }: UdharPaymentScreenPro
                                                 fontWeight: '600',
                                                 color: COLORS.danger,
                                             }}>
-                                                ₹{customer.totalUdhar.toLocaleString('en-IN')}
+                                                {formatCurrency(customer.totalUdhar)}
                                             </Text>
                                             <Text style={{
                                                 fontSize: 11,
@@ -267,8 +268,8 @@ export default function UdharPaymentScreen({ navigation }: UdharPaymentScreenPro
                         color: COLORS.textMuted,
                         marginBottom: 24,
                     }}>
-                        Outstanding: ₹{selectedCustomer.totalUdhar.toLocaleString('en-IN')} • 
-                        Remaining after payment: ₹{Math.max(0, selectedCustomer.totalUdhar - Number(amount || 0)).toLocaleString('en-IN')}
+                        Outstanding: {formatCurrency(selectedCustomer.totalUdhar)} • 
+                        Remaining after payment: {formatCurrency(Math.max(0, selectedCustomer.totalUdhar - Number(amount || 0)))}
                     </Text>
                 )}
 
