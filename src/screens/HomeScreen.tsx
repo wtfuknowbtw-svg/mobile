@@ -22,6 +22,7 @@ import i18n from '../i18n';
 import UpgradeBanner from '../components/UpgradeBanner';
 import UsageProgressBar from '../components/UsageProgressBar';
 import { useSubscription } from '../context/SubscriptionContext';
+import { openWhatsAppReminder } from '../utils/whatsappHelper';
 
 const { width } = Dimensions.get('window');
 
@@ -30,7 +31,7 @@ interface HomeScreenProps {
 }
 
 export default function HomeScreen({ navigation }: HomeScreenProps) {
-    const { dashboardStats, computeStats, businessId } = useAppStore();
+    const { dashboardStats, computeStats, businessId, business, language } = useAppStore();
     const { 
         plan, 
         usage, 
@@ -1072,7 +1073,19 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
                                     }}
                                     onPress={() => {
                                         setShowEditOptions(null);
-                                        Alert.alert('Send Reminder', 'Reminder feature coming soon!');
+                                        const transaction = showEditOptions;
+                                        if (transaction?.customerPhone) {
+                                            const businessName = business?.name || 'Humari shop';
+                                            openWhatsAppReminder(
+                                                transaction.customerPhone,
+                                                transaction.customerName || 'Customer',
+                                                businessName,
+                                                transaction.price || 0,
+                                                language as 'en' | 'hi'
+                                            );
+                                        } else {
+                                            Alert.alert('No Phone Number', 'This customer does not have a phone number saved.');
+                                        }
                                     }}
                                 >
                                     <View style={{
