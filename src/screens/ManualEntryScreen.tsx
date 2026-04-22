@@ -20,6 +20,7 @@ import { getCustomers } from '../api/customers';
 import { useAppStore } from '../store/useAppStore';
 import i18n from '../i18n';
 import type { Customer } from '../types';
+import { useSubscription } from '../context/SubscriptionContext';
 
 interface ManualEntryScreenProps {
     navigation: any;
@@ -37,6 +38,7 @@ interface ManualEntryScreenProps {
 
 export default function ManualEntryScreen({ navigation, route }: ManualEntryScreenProps) {
     const { businessId } = useAppStore();
+    const { syncSubscriptionStatus } = useSubscription();
     const prefilledData = route?.params?.prefilledData;
     
     const [customer, setCustomer] = useState(prefilledData?.customerName || '');
@@ -159,6 +161,7 @@ export default function ManualEntryScreen({ navigation, route }: ManualEntryScre
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['transactions'] });
             queryClient.invalidateQueries({ queryKey: ['customers'] });
+            syncSubscriptionStatus(); // Refresh usage stats
             navigation.goBack();
         },
         onError: (error) => {

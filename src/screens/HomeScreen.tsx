@@ -12,6 +12,7 @@ import {
     RefreshControl,
     Alert,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { COLORS } from '../constants';
 import { useAppStore } from '../store/useAppStore';
 import { useQuery } from '@tanstack/react-query';
@@ -31,13 +32,14 @@ interface HomeScreenProps {
 export default function HomeScreen({ navigation }: HomeScreenProps) {
     const { dashboardStats, computeStats, businessId } = useAppStore();
     const { 
-    plan, 
-    usage, 
-    canCreateTransaction, 
-    getTransactionProgress,
-    getUpgradeMessage,
-    getUpgradeCTA 
-} = useSubscription();
+        plan, 
+        usage, 
+        canCreateTransaction, 
+        getTransactionProgress,
+        getUpgradeMessage,
+        getUpgradeCTA,
+        syncSubscriptionStatus
+    } = useSubscription();
     const [showAddSheet, setShowAddSheet] = useState(false);
     const [selectedTxn, setSelectedTxn] = useState<Transaction | null>(null);
     const [showTxnDetails, setShowTxnDetails] = useState(false);
@@ -58,6 +60,13 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
             computeStats(recentTransactions);
         }
     }, [recentTransactions]);
+
+    // Refresh subscription status when screen comes into focus
+    useFocusEffect(
+        React.useCallback(() => {
+            syncSubscriptionStatus();
+        }, [])
+    );
 
     const openSheet = () => {
         setShowAddSheet(true);

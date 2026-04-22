@@ -14,6 +14,7 @@ import { COLORS } from '../constants';
 import { useAppStore } from '../store/useAppStore';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { createTransaction } from '../api/transactions';
+import { useSubscription } from '../context/SubscriptionContext';
 
 const { width } = Dimensions.get('window');
 
@@ -24,6 +25,7 @@ interface ReviewOCRScreenProps {
 
 export default function ReviewOCRScreen({ navigation, route }: ReviewOCRScreenProps) {
     const { businessId } = useAppStore();
+    const { syncSubscriptionStatus } = useSubscription();
     const { receiptData, imageUrl } = route.params || {};
     
     const [parsedData, setParsedData] = useState({
@@ -43,6 +45,7 @@ export default function ReviewOCRScreen({ navigation, route }: ReviewOCRScreenPr
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['transactions'] });
             queryClient.invalidateQueries({ queryKey: ['customers'] });
+            syncSubscriptionStatus(); // Refresh usage stats
             navigation.popToTop();
         },
         onError: (error) => {

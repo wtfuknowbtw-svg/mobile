@@ -15,6 +15,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getCustomers } from '../api/customers';
 import { createTransaction } from '../api/transactions';
 import type { Customer } from '../types';
+import { useSubscription } from '../context/SubscriptionContext';
 
 interface UdharPaymentScreenProps {
     navigation: any;
@@ -22,6 +23,7 @@ interface UdharPaymentScreenProps {
 
 export default function UdharPaymentScreen({ navigation }: UdharPaymentScreenProps) {
     const { businessId } = useAppStore();
+    const { syncSubscriptionStatus } = useSubscription();
     const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
     const [amount, setAmount] = useState('');
     const [showCustomerList, setShowCustomerList] = useState(false);
@@ -42,6 +44,7 @@ export default function UdharPaymentScreen({ navigation }: UdharPaymentScreenPro
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['transactions'] });
             queryClient.invalidateQueries({ queryKey: ['customers'] });
+            syncSubscriptionStatus(); // Refresh usage stats
             Alert.alert('Success', 'Udhar payment recorded successfully');
             navigation.goBack();
         },

@@ -17,8 +17,8 @@ import { COLORS } from '../constants';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getCustomerTransactions } from '../api/customers';
 import { createTransaction } from '../api/transactions';
-import { useAppStore } from '../store/useAppStore';
 import type { Transaction } from '../types';
+import { useSubscription } from '../context/SubscriptionContext';
 
 interface CustomerDetailScreenProps {
     navigation: any;
@@ -27,7 +27,8 @@ interface CustomerDetailScreenProps {
 
 export default function CustomerDetailScreen({ navigation, route }: CustomerDetailScreenProps) {
     const { customerId, customerName, customerPhone } = route.params || {};
-    const { businessId } = useAppStore();
+    const { businessId, businessName } = useAppStore();
+    const { syncSubscriptionStatus } = useSubscription();
     const queryClient = useQueryClient();
 
     const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -81,6 +82,7 @@ export default function CustomerDetailScreen({ navigation, route }: CustomerDeta
             queryClient.invalidateQueries({ queryKey: ['customerTransactions', customerId] });
             queryClient.invalidateQueries({ queryKey: ['customers'] });
             queryClient.invalidateQueries({ queryKey: ['transactions'] });
+            syncSubscriptionStatus(); // Refresh usage stats
             setShowPaymentModal(false);
 
             const paid = parseFloat(paymentAmount) || 0;
@@ -126,11 +128,11 @@ export default function CustomerDetailScreen({ navigation, route }: CustomerDeta
     };
 
     // WhatsApp Reminder
-    const sendWhatsAppReminder = () => {
+    const sendWhatsAppReminder = async () => {
         if (!customerPhone) {
             Alert.alert(
                 'No Phone Number',
-                'This customer has no phone number saved. Please edit the customer to add one.',
+                'Please add customer\'s phone number first.',
                 [{ text: 'OK' }],
             );
             return;
@@ -138,12 +140,27 @@ export default function CustomerDetailScreen({ navigation, route }: CustomerDeta
 
         const phone = customerPhone.replace(/\D/g, '');
         const phoneWithCountry = phone.startsWith('91') ? phone : `91${phone}`;
-        const message = `Namaste ${customerName || 'bhai'} bhai, aapka ₹${totalUdhar.toLocaleString('en-IN')} udhar baaki hai. Kripya jaldi bhejna. 🙏`;
-        const url = `https://wa.me/${phoneWithCountry}?text=${encodeURIComponent(message)}`;
+        
+        const message = `Namasté ${customerName || 'Customer'} ji! 🙏\n${businessName || 'Humari shop'} ki taraf se yaad dila rahe hain.\n\nAapka baaki amount: ₹${totalUdhar.toLocaleString('en-IN')}\n\nJaldi payment kar dein. Shukriya! 🙏`;
+        
+        const encodedMessage = encodeURIComponent(message);
+        const whatsappUrl = `whatsapp://send?phone=${phoneWithCountry}&text=${encodedMessage}`;
+        const smsUrl = `sms:${phoneWithCountry}${Platform.OS === 'ios' ? '&' : '?'}body=${encodedMessage}`;
 
-        Linking.openURL(url).catch(() => {
-            Alert.alert('Error', 'Could not open WhatsApp. Is it installed?');
-        });
+        try {
+            const canOpenWhatsApp = await Linking.canOpenURL(whatsappUrl);
+            if (canOpenWhatsApp) {
+                await Linking.openURL(whatsappUrl);
+            } else {
+                // Fallback to SMS
+                await Linking.openURL(smsUrl);
+            }
+        } catch (error) {
+            // Last resort fallback to SMS if canOpenURL fails or errors
+            Linking.openURL(smsUrl).catch(() => {
+                Alert.alert('Error', 'Could not open WhatsApp or SMS app.');
+            });
+        }
     };
 
     return (

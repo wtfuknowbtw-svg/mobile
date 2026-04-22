@@ -12,6 +12,7 @@ import {
     Modal,
     KeyboardAvoidingView,
     Platform,
+    Linking,
 } from 'react-native';
 import { COLORS } from '../constants';
 import { useAppStore } from '../store/useAppStore';
@@ -27,7 +28,7 @@ interface CustomersScreenProps {
 }
 
 export default function CustomersScreen({ navigation }: CustomersScreenProps) {
-    const { businessId } = useAppStore();
+    const { businessId, businessName } = useAppStore();
     const { 
         plan, 
         usage, 
@@ -86,6 +87,39 @@ export default function CustomersScreen({ navigation }: CustomersScreenProps) {
         });
     };
 
+    const sendWhatsAppReminder = async (customer: Customer) => {
+        if (!customer.phone) {
+            Alert.alert(
+                'No Phone Number',
+                'Please add customer\'s phone number first.',
+                [{ text: 'OK' }],
+            );
+            return;
+        }
+
+        const phone = customer.phone.replace(/\D/g, '');
+        const phoneWithCountry = phone.startsWith('91') ? phone : `91${phone}`;
+        
+        const message = `Namasté ${customer.name || 'Customer'} ji! 🙏\n${businessName || 'Humari shop'} ki taraf se yaad dila rahe hain.\n\nAapka baaki amount: ₹${(customer.totalUdhar || 0).toLocaleString('en-IN')}\n\nJaldi payment kar dein. Shukriya! 🙏`;
+        
+        const encodedMessage = encodeURIComponent(message);
+        const whatsappUrl = `whatsapp://send?phone=${phoneWithCountry}&text=${encodedMessage}`;
+        const smsUrl = `sms:${phoneWithCountry}${Platform.OS === 'ios' ? '&' : '?'}body=${encodedMessage}`;
+
+        try {
+            const canOpenWhatsApp = await Linking.canOpenURL(whatsappUrl);
+            if (canOpenWhatsApp) {
+                await Linking.openURL(whatsappUrl);
+            } else {
+                await Linking.openURL(smsUrl);
+            }
+        } catch (error) {
+            Linking.openURL(smsUrl).catch(() => {
+                Alert.alert('Error', 'Could not open WhatsApp or SMS app.');
+            });
+        }
+    };
+
     const renderCustomerRow = (customer: Customer, showUdhar: boolean) => (
         <TouchableOpacity
             key={customer.id}
@@ -126,15 +160,28 @@ export default function CustomersScreen({ navigation }: CustomersScreenProps) {
                 </Text>
             </View>
 
-            {/* Amount */}
+            {/* Amount & Reminder */}
             {showUdhar ? (
-                <View style={{ alignItems: 'flex-end' }}>
-                    <Text style={{ fontSize: 15, fontWeight: '700', color: COLORS.danger }}>
-                        +{formatCurrency(customer.totalUdhar)}
-                    </Text>
-                    <Text style={{ fontSize: 11, color: COLORS.danger, marginTop: 2 }}>
-                        {i18n.t('customers.owed')}
-                    </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <TouchableOpacity
+                        onPress={() => sendWhatsAppReminder(customer)}
+                        style={{
+                            padding: 10,
+                            marginRight: 8,
+                            backgroundColor: '#25D366' + '15',
+                            borderRadius: 10,
+                        }}
+                    >
+                        <Text style={{ fontSize: 18 }}>💬</Text>
+                    </TouchableOpacity>
+                    <View style={{ alignItems: 'flex-end' }}>
+                        <Text style={{ fontSize: 15, fontWeight: '700', color: COLORS.danger }}>
+                            +{formatCurrency(customer.totalUdhar)}
+                        </Text>
+                        <Text style={{ fontSize: 11, color: COLORS.danger, marginTop: 2 }}>
+                            {i18n.t('customers.owed')}
+                        </Text>
+                    </View>
                 </View>
             ) : (
                 <View
