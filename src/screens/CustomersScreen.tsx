@@ -28,7 +28,8 @@ interface CustomersScreenProps {
 }
 
 export default function CustomersScreen({ navigation }: CustomersScreenProps) {
-    const { businessId, businessName } = useAppStore();
+    const { businessId, business } = useAppStore();
+    const businessName = business?.name || 'Humari shop';
     const { 
         plan, 
         usage, 

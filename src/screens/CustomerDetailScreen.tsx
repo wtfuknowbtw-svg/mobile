@@ -17,6 +17,7 @@ import { COLORS } from '../constants';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getCustomerTransactions } from '../api/customers';
 import { createTransaction } from '../api/transactions';
+import { useAppStore } from '../store/useAppStore';
 import type { Transaction } from '../types';
 import { useSubscription } from '../context/SubscriptionContext';
 
@@ -27,7 +28,8 @@ interface CustomerDetailScreenProps {
 
 export default function CustomerDetailScreen({ navigation, route }: CustomerDetailScreenProps) {
     const { customerId, customerName, customerPhone } = route.params || {};
-    const { businessId, businessName } = useAppStore();
+    const { businessId, business } = useAppStore();
+    const businessName = business?.name || 'Humari shop';
     const { syncSubscriptionStatus } = useSubscription();
     const queryClient = useQueryClient();
 
