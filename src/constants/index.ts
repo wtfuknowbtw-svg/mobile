@@ -27,7 +27,7 @@ export const FONTS = {
     bold: 'System',
 } as const;
 
-export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://apnabackend-b8k1huwea-ashers-projects-a161d983.vercel.app/api';
+export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://apnabackend-theta.vercel.app';
 
 export const SUPPORTED_LANGUAGES = [
     { code: 'hi', label: 'हिंदी', labelEn: 'Hindi', flag: 'IN' },

@@ -16,6 +16,7 @@ import {
 import { Audio } from 'expo-av';
 import { COLORS } from '../constants';
 import { processVoiceAudio } from '../api/ai';
+import { useSubscription } from '../context/SubscriptionContext';
 
 interface VoiceInputScreenProps {
     navigation: any;
@@ -30,6 +31,7 @@ const LANGUAGES = [
 ];
 
 export default function VoiceInputScreen({ navigation }: VoiceInputScreenProps) {
+    const { hasAIFeatures, getUpgradeMessage, getUpgradeCTA } = useSubscription();
     const [isListening, setIsListening] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
     const [transcript, setTranscript] = useState('');
@@ -102,6 +104,25 @@ export default function VoiceInputScreen({ navigation }: VoiceInputScreenProps) 
 
     // ── Recording Handlers ───────────────────────────────────────────────────
     async function startRecording() {
+        // Check AI features access
+        if (!hasAIFeatures()) {
+            Alert.alert(
+                'AI Features Required',
+                getUpgradeMessage('ai'),
+                [
+                    {
+                        text: 'Cancel',
+                        style: 'cancel',
+                    },
+                    {
+                        text: getUpgradeCTA('ai'),
+                        onPress: () => navigation.navigate('Upgrade'),
+                    },
+                ]
+            );
+            return;
+        }
+
         try {
             const permission = await Audio.requestPermissionsAsync();
             if (permission.status !== 'granted') {

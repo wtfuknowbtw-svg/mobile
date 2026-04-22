@@ -4,6 +4,7 @@ import { Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { SubscriptionProvider } from './src/context/SubscriptionContext';
 import AppNavigator from './src/navigation/AppNavigator';
 
 const queryClient = new QueryClient({
@@ -20,7 +21,9 @@ export default function App() {
   if (Platform.OS === 'web') {
     return (
       <QueryClientProvider client={queryClient}>
-        <AppNavigator />
+        <SubscriptionProvider>
+          <AppNavigator />
+        </SubscriptionProvider>
       </QueryClientProvider>
     );
   }
@@ -29,7 +32,9 @@ export default function App() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
-          <AppNavigator />
+          <SubscriptionProvider>
+            <AppNavigator />
+          </SubscriptionProvider>
         </QueryClientProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

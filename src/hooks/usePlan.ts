@@ -149,7 +149,7 @@ export function usePlan() {
       setSubscriptionStatus(fullStatus);
       await savePlanToStorage(fullStatus);
       
-      console.log('Subscription status synced:', newStatus);
+      console.log('Subscription status synced:', fullStatus);
     } catch (error: any) {
       console.error('Error syncing subscription status:', error);
       

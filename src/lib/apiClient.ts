@@ -18,7 +18,7 @@ export async function apiRequest<T = any>(
     const token = getToken();
     const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
     
-    console.log('API Request - Endpoint:', endpoint);
+    console.log(`API Request - [${options.method || 'GET'}] Endpoint:`, endpoint);
     console.log('API Request - Full URL:', url);
     console.log('API Request - API_BASE_URL:', API_BASE_URL);
     console.log('API Request - Token:', token ? 'Bearer ' + token.substring(0, 20) + '...' : 'NO TOKEN');
@@ -42,11 +42,14 @@ export async function apiRequest<T = any>(
             headers,
         });
 
+        console.log(`API Response - [${options.method || 'GET'}] Status:`, response.status);
+
         const contentType = response.headers.get('content-type');
         let data: any = {};
         
         if (contentType && contentType.includes('application/json')) {
             data = await response.json();
+            console.log('API Response - Data:', JSON.stringify(data).substring(0, 200) + '...');
         } else {
             const text = await response.text();
             console.error('API Response is not JSON:', text.substring(0, 200));
@@ -56,6 +59,7 @@ export async function apiRequest<T = any>(
         }
 
         if (!response.ok) {
+            console.error(`API Request failed with status ${response.status}:`, data.error);
             return {
                 error: data.error || `Request failed with status ${response.status}`,
             };
@@ -131,17 +135,22 @@ export async function apiUpload<T = any>(
             body: formData,
         });
 
+        console.log(`API Upload - Status:`, response.status);
+
         const contentType = response.headers.get('content-type');
         let data: any = {};
         
         if (contentType && contentType.includes('application/json')) {
             data = await response.json();
+            console.log('API Upload - Data:', JSON.stringify(data).substring(0, 200) + '...');
         } else {
             const text = await response.text();
+            console.error('API Upload - Not JSON:', text.substring(0, 200));
             return { error: `Server error: ${text.substring(0, 100)}` };
         }
 
         if (!response.ok) {
+            console.error(`API Upload failed with status ${response.status}:`, data.error);
             return { error: data.error || `Upload failed (${response.status})` };
         }
 

@@ -19,6 +19,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getCustomers, createCustomer } from '../api/customers';
 import type { Customer } from '../types';
 import i18n from '../i18n';
+import { useSubscription } from '../context/SubscriptionContext';
+import UsageProgressBar from '../components/UsageProgressBar';
 
 interface CustomersScreenProps {
     navigation: any;
@@ -26,6 +28,14 @@ interface CustomersScreenProps {
 
 export default function CustomersScreen({ navigation }: CustomersScreenProps) {
     const { businessId } = useAppStore();
+    const { 
+        plan, 
+        usage, 
+        canCreateCustomer, 
+        getCustomerProgress,
+        getUpgradeMessage,
+        getUpgradeCTA 
+    } = useSubscription();
     const [search, setSearch] = useState('');
     const [showAddModal, setShowAddModal] = useState(false);
     const [newName, setNewName] = useState('');
@@ -165,21 +175,40 @@ export default function CustomersScreen({ navigation }: CustomersScreenProps) {
                     </Text>
                 </View>
                 <TouchableOpacity
-                    onPress={() => setShowAddModal(true)}
-                    activeOpacity={0.8}
+                    onPress={() => {
+                        if (!canCreateCustomer()) {
+                            Alert.alert(
+                                'Customer Limit Reached',
+                                getUpgradeMessage('customers'),
+                                [
+                                    {
+                                        text: 'Cancel',
+                                        style: 'cancel',
+                                    },
+                                    {
+                                        text: getUpgradeCTA('customers'),
+                                        onPress: () => navigation.navigate('Upgrade'),
+                                    },
+                                ]
+                            );
+                            return;
+                        }
+                        setShowAddModal(true);
+                    }}
+                    activeOpacity={canCreateCustomer() ? 0.8 : 0.5}
                     style={{
                         paddingHorizontal: 12,
                         paddingVertical: 8,
                         borderRadius: 10,
-                        backgroundColor: COLORS.successLight,
+                        backgroundColor: canCreateCustomer() ? COLORS.successLight : COLORS.background,
                         flexDirection: 'row',
                         alignItems: 'center',
                         borderWidth: 1,
-                        borderColor: COLORS.success + '20',
+                        borderColor: canCreateCustomer() ? COLORS.success + '20' : COLORS.border,
                     }}
                 >
-                    <Text style={{ fontSize: 16, marginRight: 4, color: COLORS.success }}>+</Text>
-                    <Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.success }}>
+                    <Text style={{ fontSize: 16, marginRight: 4, color: canCreateCustomer() ? COLORS.success : COLORS.textMuted }}>+</Text>
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: canCreateCustomer() ? COLORS.success : COLORS.textMuted }}>
                         {i18n.t('customers.addNew')}
                     </Text>
                 </TouchableOpacity>
@@ -213,6 +242,19 @@ export default function CustomersScreen({ navigation }: CustomersScreenProps) {
                     />
                 </View>
             </View>
+
+            {/* Usage Progress Bar for Free Plan */}
+            {plan === 'free' && (
+                <View style={{ paddingHorizontal: 20, marginBottom: 16 }}>
+                    <UsageProgressBar
+                        current={usage.customers.current}
+                        limit={usage.customers.limit}
+                        label="Customers"
+                        showWarning={true}
+                        color={COLORS.primary}
+                    />
+                </View>
+            )}
 
             <ScrollView
                 style={{ flex: 1, paddingHorizontal: 20 }}

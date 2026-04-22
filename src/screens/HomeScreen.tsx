@@ -19,7 +19,8 @@ import { getTransactions, deleteTransaction } from '../api/transactions';
 import type { Transaction } from '../types';
 import i18n from '../i18n';
 import UpgradeBanner from '../components/UpgradeBanner';
-import { useSubscription } from '../hooks/useSubscription';
+import UsageProgressBar from '../components/UsageProgressBar';
+import { useSubscription } from '../context/SubscriptionContext';
 
 const { width } = Dimensions.get('window');
 
@@ -29,7 +30,14 @@ interface HomeScreenProps {
 
 export default function HomeScreen({ navigation }: HomeScreenProps) {
     const { dashboardStats, computeStats, businessId } = useAppStore();
-    const { isFreePlan, canAddTransaction, showLimitWarning } = useSubscription();
+    const { 
+    plan, 
+    usage, 
+    canCreateTransaction, 
+    getTransactionProgress,
+    getUpgradeMessage,
+    getUpgradeCTA 
+} = useSubscription();
     const [showAddSheet, setShowAddSheet] = useState(false);
     const [selectedTxn, setSelectedTxn] = useState<Transaction | null>(null);
     const [showTxnDetails, setShowTxnDetails] = useState(false);
@@ -219,12 +227,12 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
             </View>
 
             {/* Upgrade Banner for free plan users */}
-            {isFreePlan && recentTransactions.length >= 40 && (
+            {plan === 'free' && usage.transactions.isLimitReached && (
                 <UpgradeBanner
                     compact
                     feature="transactions"
-                    message="You're approaching the free plan limit (50 txns/mo)"
-                    onUpgrade={() => navigation.navigate('Subscription')}
+                    message="You've reached the free plan limit (50 txns/mo)"
+                    onUpgrade={() => navigation.navigate('Upgrade')}
                 />
             )}
 
@@ -305,6 +313,19 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
                     </Text>
                 </View>
             </View>
+
+            {/* Usage Progress Bar for Free Plan */}
+            {plan === 'free' && (
+                <View style={{ paddingHorizontal: 20, marginBottom: 16 }}>
+                    <UsageProgressBar
+                        current={usage.transactions.current}
+                        limit={usage.transactions.limit}
+                        label="Transactions"
+                        showWarning={true}
+                        color={COLORS.success}
+                    />
+                </View>
+            )}
 
             {/* Outstanding Udhar List */}
             <View style={{ paddingHorizontal: 20, marginBottom: 8 }}>
@@ -532,8 +553,27 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
 
             {/* FAB */}
             <TouchableOpacity
-                onPress={openSheet}
-                activeOpacity={0.85}
+                onPress={() => {
+                    if (!canCreateTransaction()) {
+                        Alert.alert(
+                            'Transaction Limit Reached',
+                            getUpgradeMessage('transactions'),
+                            [
+                                {
+                                    text: 'Cancel',
+                                    style: 'cancel',
+                                },
+                                {
+                                    text: getUpgradeCTA('transactions'),
+                                    onPress: () => navigation.navigate('Upgrade'),
+                                },
+                            ]
+                        );
+                        return;
+                    }
+                    openSheet();
+                }}
+                activeOpacity={canCreateTransaction() ? 0.85 : 0.5}
                 style={{
                     position: 'absolute',
                     bottom: 24,
@@ -541,14 +581,14 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
                     width: 56,
                     height: 56,
                     borderRadius: 16,
-                    backgroundColor: COLORS.success,
+                    backgroundColor: canCreateTransaction() ? COLORS.success : COLORS.textMuted,
                     justifyContent: 'center',
                     alignItems: 'center',
-                    shadowColor: COLORS.success,
+                    shadowColor: canCreateTransaction() ? COLORS.success : 'transparent',
                     shadowOffset: { width: 0, height: 4 },
-                    shadowOpacity: 0.4,
+                    shadowOpacity: canCreateTransaction() ? 0.4 : 0,
                     shadowRadius: 8,
-                    elevation: 8,
+                    elevation: canCreateTransaction() ? 8 : 0,
                 }}
             >
                 <Text style={{ fontSize: 28, color: COLORS.white, fontWeight: '300' }}>
