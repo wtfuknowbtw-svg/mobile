@@ -9,6 +9,7 @@ import i18n from '../i18n';
 
 // Screens
 import SplashScreen from '../screens/SplashScreen';
+import OnboardingScreen from '../screens/OnboardingScreen';
 import LanguageSelectScreen from '../screens/LanguageSelectScreen';
 import OTPLoginScreen from '../screens/OTPLoginScreen';
 import HomeScreen from '../screens/HomeScreen';
@@ -130,6 +131,7 @@ export default function AppNavigator() {
             >
                 {/* Auth Flow */}
                 <Stack.Screen name="Splash" component={SplashScreen} />
+                <Stack.Screen name="Onboarding" component={OnboardingScreen} />
                 <Stack.Screen name="LanguageSelect" component={LanguageSelectScreen} />
                 <Stack.Screen name="OTPLogin" component={OTPLoginScreen} />
 
