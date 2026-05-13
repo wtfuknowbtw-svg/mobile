@@ -45,8 +45,8 @@ export function useSubscription() {
     // ─── Feature gate helpers ───────────────────────────────
 
     const isFreePlan = plan === 'free';
-    const isBasicPlan = plan === 'basic';
     const isProPlan = plan === 'pro';
+    const isBusinessPlan = plan === 'business';
     const isPaidPlan = plan !== 'free';
 
     /**
@@ -111,8 +111,8 @@ export function useSubscription() {
 
         // Plan checks
         isFreePlan,
-        isBasicPlan,
         isProPlan,
+        isBusinessPlan,
         isPaidPlan,
 
         // Feature gates

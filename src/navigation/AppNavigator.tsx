@@ -24,6 +24,7 @@ import EditTransactionScreen from '../screens/EditTransactionScreen';
 import UdharPaymentScreen from '../screens/UdharPaymentScreen';
 import BusinessProfileScreen from '../screens/BusinessProfileScreen';
 import SubscriptionScreen from '../screens/SubscriptionScreen';
+import UpgradeScreen from '../screens/UpgradeScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const MainTab = createBottomTabNavigator<MainTabParamList>();
@@ -163,6 +164,11 @@ export default function AppNavigator() {
                 <Stack.Screen
                     name="Subscription"
                     component={SubscriptionScreen}
+                    options={{ animation: 'slide_from_bottom' }}
+                />
+                <Stack.Screen
+                    name="Upgrade"
+                    component={UpgradeScreen}
                     options={{ animation: 'slide_from_bottom' }}
                 />
             </Stack.Navigator>

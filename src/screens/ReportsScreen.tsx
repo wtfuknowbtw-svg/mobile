@@ -17,7 +17,7 @@ import { getTransactions } from '../api/transactions';
 import type { Transaction } from '../types';
 import i18n from '../i18n';
 import UpgradeBanner from '../components/UpgradeBanner';
-import { useSubscription } from '../hooks/useSubscription';
+import { useSubscription } from '../context/SubscriptionContext';
 
 interface ReportsScreenProps {
     navigation: any;
@@ -25,7 +25,8 @@ interface ReportsScreenProps {
 
 export default function ReportsScreen({ navigation }: ReportsScreenProps) {
     const { businessId } = useAppStore();
-    const { isFreePlan } = useSubscription();
+    const { plan } = useSubscription();
+    const isFreePlan = plan === 'free';
 
     const { data: txnsResponse, isLoading } = useQuery({
         queryKey: ['transactions', businessId],

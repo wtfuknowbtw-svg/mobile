@@ -1,4 +1,5 @@
 import React, { createContext, useContext, ReactNode } from 'react';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { usePlan } from '../hooks/usePlan';
 
 export interface SubscriptionContextType {
@@ -181,35 +182,36 @@ export function withPlanGate<T extends object>(
       
       // Default fallback
       return (
-        <div style={{ 
+        <View style={{ 
           flex: 1, 
           justifyContent: 'center', 
           alignItems: 'center', 
           padding: 20 
         }}>
-          <p style={{ 
+          <Text style={{ 
             textAlign: 'center', 
             marginBottom: 16, 
             color: '#666' 
           }}>
             {getUpgradeMessage(requiredPlan)}
-          </p>
-          <button
-            onClick={() => {
+          </Text>
+          <TouchableOpacity
+            onPress={() => {
               // Navigate to upgrade screen
               console.log('Navigate to upgrade screen');
             }}
             style={{
-              padding: '12px 24px',
+              paddingHorizontal: 24,
+              paddingVertical: 12,
               backgroundColor: '#057A55',
-              color: 'white',
-              border: 'none',
               borderRadius: 8,
             }}
           >
-            {getUpgradeCTA(requiredPlan)}
-          </button>
-        </div>
+            <Text style={{ color: 'white', fontWeight: '600' }}>
+              {getUpgradeCTA(requiredPlan)}
+            </Text>
+          </TouchableOpacity>
+        </View>
       );
     }
     

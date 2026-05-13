@@ -84,6 +84,7 @@ export type RootStackParamList = {
     UdharPayment: undefined;
     BusinessProfile: undefined;
     Subscription: undefined;
+    Upgrade: undefined;
 };
 
 export type MainTabParamList = {

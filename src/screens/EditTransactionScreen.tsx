@@ -11,6 +11,7 @@ import {
     ActivityIndicator,
     Alert,
     Modal,
+    Linking,
 } from 'react-native';
 import * as Contacts from 'expo-contacts';
 import { COLORS } from '../constants';
@@ -95,7 +96,7 @@ export default function EditTransactionScreen({ navigation, route }: EditTransac
                     'Please grant contacts permission to import from phonebook.',
                     [
                         { text: 'Cancel', style: 'cancel' },
-                        { text: 'Open Settings', onPress: () => {}}
+                        { text: 'Open Settings', onPress: () => Linking.openSettings() }
                     ]
                 );
                 return;

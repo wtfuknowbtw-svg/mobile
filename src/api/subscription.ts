@@ -2,7 +2,7 @@ import { apiGet, apiPost } from '../lib/apiClient';
 
 export interface SubscriptionData {
     id: string;
-    plan: 'free' | 'basic' | 'pro';
+    plan: 'free' | 'pro' | 'business';
     status: 'active' | 'pending' | 'cancelled' | 'expired';
     interval: 'month' | 'year';
     endsAt: string | null;
@@ -26,14 +26,14 @@ export const PLAN_LIMITS = {
         reportsEnabled: false,
         exportEnabled: false,
     },
-    basic: {
+    pro: {
         maxTransactionsPerMonth: 500,
         maxCustomers: 100,
         aiScansPerDay: 25,
         reportsEnabled: true,
         exportEnabled: false,
     },
-    pro: {
+    business: {
         maxTransactionsPerMonth: Infinity,
         maxCustomers: Infinity,
         aiScansPerDay: Infinity,

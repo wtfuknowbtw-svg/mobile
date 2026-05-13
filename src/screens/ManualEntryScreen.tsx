@@ -11,6 +11,7 @@ import {
     ActivityIndicator,
     Alert,
     Modal,
+    Linking,
 } from 'react-native';
 import * as Contacts from 'expo-contacts';
 import { COLORS } from '../constants';
@@ -101,9 +102,7 @@ export default function ManualEntryScreen({ navigation, route }: ManualEntryScre
                     'Please grant contacts permission to import from phonebook.',
                     [
                         { text: 'Cancel', style: 'cancel' },
-                        { text: 'Open Settings', onPress: () => {
-                            // Would open settings here
-                        }}
+                        { text: 'Open Settings', onPress: () => Linking.openSettings() }
                     ]
                 );
                 return;
