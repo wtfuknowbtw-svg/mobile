@@ -10,28 +10,35 @@ import {
     SafeAreaView,
 } from 'react-native';
 import { COLORS } from '../constants';
+import { useAppStore } from '../store/useAppStore';
 
 const { width, height } = Dimensions.get('window');
 
 const SLIDES = [
     {
         id: '1',
-        title: 'हिसाब रखें',
-        subtitle: 'Track all credit/debit\nअपना सारा हिसाब-किताब एक जगह रखें',
+        titleHi: 'हिसाब रखें',
+        titleEn: 'Keep Track',
+        subtitleHi: 'अपना सारा हिसाब-किताब एक जगह रखें',
+        subtitleEn: 'Track all credit/debit in one place',
         icon: '📒',
         backgroundColor: COLORS.white,
     },
     {
         id: '2',
-        title: 'ग्राहक जोड़ें',
-        subtitle: 'Manage customers easily\nग्राहकों को जोड़ें और उनका बकाया देखें',
+        titleHi: 'ग्राहक जोड़ें',
+        titleEn: 'Add Customers',
+        subtitleHi: 'ग्राहकों को जोड़ें और उनका बकाया देखें',
+        subtitleEn: 'Manage customers and track their balances',
         icon: '👥',
         backgroundColor: COLORS.white,
     },
     {
         id: '3',
-        title: 'WhatsApp रिमाइंडर',
-        subtitle: 'Send payment reminders\nपेमेंट के लिए WhatsApp पर रिमाइंडर भेजें',
+        titleHi: 'WhatsApp रिमाइंडर',
+        titleEn: 'WhatsApp Reminders',
+        subtitleHi: 'पेमेंट के लिए WhatsApp पर रिमाइंडर भेजें',
+        subtitleEn: 'Send professional payment reminders easily',
         icon: '📱',
         backgroundColor: COLORS.white,
     },
@@ -42,6 +49,7 @@ interface OnboardingScreenProps {
 }
 
 export default function OnboardingScreen({ navigation }: OnboardingScreenProps) {
+    const { language } = useAppStore();
     const [currentIndex, setCurrentIndex] = useState(0);
     const flatListRef = useRef<FlatList>(null);
 
@@ -65,10 +73,14 @@ export default function OnboardingScreen({ navigation }: OnboardingScreenProps) 
             <View style={styles.iconContainer}>
                 <Text style={styles.icon}>{item.icon}</Text>
             </View>
-            <Text style={styles.title}>{item.title}</Text>
-            <Text style={styles.subtitle}>{item.subtitle}</Text>
+            <Text style={styles.title}>{language === 'hi' ? item.titleHi : item.titleEn}</Text>
+            <Text style={styles.subtitle}>{language === 'hi' ? item.subtitleHi : item.subtitleEn}</Text>
         </View>
     );
+
+    const nextButtonText = currentIndex === SLIDES.length - 1 
+        ? (language === 'hi' ? 'शुरू करें' : 'Get Started')
+        : (language === 'hi' ? 'आगे बढ़ें' : 'Next');
 
     return (
         <SafeAreaView style={styles.container}>
@@ -76,7 +88,7 @@ export default function OnboardingScreen({ navigation }: OnboardingScreenProps) 
             
             <View style={styles.header}>
                 <TouchableOpacity onPress={handleSkip}>
-                    <Text style={styles.skipText}>Skip</Text>
+                    <Text style={styles.skipText}>{language === 'hi' ? 'छोड़ें' : 'Skip'}</Text>
                 </TouchableOpacity>
             </View>
 
@@ -114,9 +126,7 @@ export default function OnboardingScreen({ navigation }: OnboardingScreenProps) 
                     onPress={handleNext}
                     activeOpacity={0.8}
                 >
-                    <Text style={styles.buttonText}>
-                        {currentIndex === SLIDES.length - 1 ? 'Get Started' : 'आगे बढ़ें'}
-                    </Text>
+                    <Text style={styles.buttonText}>{nextButtonText}</Text>
                 </TouchableOpacity>
             </View>
         </SafeAreaView>

@@ -22,6 +22,7 @@ import { useAppStore } from '../store/useAppStore';
 import i18n from '../i18n';
 import type { Customer } from '../types';
 import { useSubscription } from '../context/SubscriptionContext';
+import { triggerTransactionAdded, triggerHighUdharAlert, isNotificationEnabled } from '../utils/notifications';
 
 interface ManualEntryScreenProps {
     navigation: any;
@@ -157,10 +158,22 @@ export default function ManualEntryScreen({ navigation, route }: ManualEntryScre
 
     const mutation = useMutation({
         mutationFn: createTransaction,
-        onSuccess: () => {
+        onSuccess: async () => {
             queryClient.invalidateQueries({ queryKey: ['transactions'] });
             queryClient.invalidateQueries({ queryKey: ['customers'] });
             syncSubscriptionStatus(); // Refresh usage stats
+
+            // Check if customer totalUdhar > 1000 and trigger HIGH_UDHAR_ALERT
+            if (customer && type === 'credit') {
+                const customerData = customers.find(c => c.name === customer);
+                if (customerData && customerData.totalUdhar > 1000) {
+                    const isEnabled = await isNotificationEnabled('HIGH_UDHAR_ALERT');
+                    if (isEnabled) {
+                        await triggerHighUdharAlert(customerData.name, customerData.totalUdhar);
+                    }
+                }
+            }
+
             navigation.goBack();
         },
         onError: (error) => {

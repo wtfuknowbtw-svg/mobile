@@ -72,6 +72,7 @@ export interface TopItem {
 
 export type RootStackParamList = {
     Splash: undefined;
+    Onboarding: undefined;
     LanguageSelect: undefined;
     OTPLogin: undefined;
     MainTabs: undefined;

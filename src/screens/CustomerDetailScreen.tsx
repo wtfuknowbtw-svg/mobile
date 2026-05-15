@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
     View,
     Text,
@@ -12,6 +12,7 @@ import {
     Alert,
     Linking,
     Platform,
+    StyleSheet,
 } from 'react-native';
 import { COLORS } from '../constants';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -29,15 +30,18 @@ interface CustomerDetailScreenProps {
     route: any;
 }
 
+type FilterType = 'all' | 'credit' | 'cash';
+
 export default function CustomerDetailScreen({ navigation, route }: CustomerDetailScreenProps) {
     const { customerId, customerName, customerPhone } = route.params || {};
-    const { businessId, business } = useAppStore();
+    const { business, language } = useAppStore();
     const businessName = business?.name || 'Humari shop';
     const { syncSubscriptionStatus } = useSubscription();
     const queryClient = useQueryClient();
 
     const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [paymentAmount, setPaymentAmount] = useState('');
+    const [filter, setFilter] = useState<FilterType>('all');
 
     const { data, isLoading, refetch, isRefetching } = useQuery({
         queryKey: ['customerTransactions', customerId],
@@ -47,19 +51,47 @@ export default function CustomerDetailScreen({ navigation, route }: CustomerDeta
 
     const transactions: Transaction[] = data?.data || [];
 
-    const totalCredit = transactions
-        .filter((t) => t.type === 'credit')
-        .reduce((sum, t) => sum + t.price, 0);
+    const { totalCredit, totalCash, totalUdhar } = useMemo(() => {
+        const credit = transactions
+            .filter((t) => t.type === 'credit')
+            .reduce((sum, t) => sum + t.price, 0);
+        const cash = transactions
+            .filter((t) => t.type === 'cash')
+            .reduce((sum, t) => sum + t.price, 0);
+        return {
+            totalCredit: credit,
+            totalCash: cash,
+            totalUdhar: Math.max(0, credit - cash)
+        };
+    }, [transactions]);
 
-    const totalCash = transactions
-        .filter((t) => t.type === 'cash')
-        .reduce((sum, t) => sum + t.price, 0);
+    const filteredTransactions = useMemo(() => {
+        if (filter === 'all') return transactions;
+        return transactions.filter(t => t.type === filter);
+    }, [transactions, filter]);
 
-    const totalUdhar = Math.max(0, totalCredit - totalCash);
-
+    const text = {
+        transactions: language === 'hi' ? 'लेन-देन' : 'transactions',
+        remind: language === 'hi' ? 'याद दिलाएं' : 'Remind',
+        call: language === 'hi' ? 'कॉल करें' : 'Call',
+        totalPaid: language === 'hi' ? 'कुल जमा' : 'Total Paid',
+        outstanding: language === 'hi' ? 'कुल बकाया' : 'Outstanding',
+        history: language === 'hi' ? 'लेन-देन का इतिहास' : 'TRANSACTION HISTORY',
+        noTxns: language === 'hi' ? 'अभी कोई लेन-देन नहीं है' : 'No transactions yet',
+        collectBtn: language === 'hi' ? '💰 पेमेंट प्राप्त करें' : '💰 Collect Payment',
+        collectTitle: language === 'hi' ? 'पेमेंट जमा करें' : 'Collect Payment',
+        from: language === 'hi' ? 'से' : 'From',
+        amount: language === 'hi' ? 'पेमेंट राशि' : 'PAYMENT AMOUNT',
+        partialHint: language === 'hi' ? 'आप कम राशि भी डाल सकते हैं' : 'You can collect a partial payment too',
+        cancel: language === 'hi' ? 'रद्द करें' : 'Cancel',
+        confirm: language === 'hi' ? '✅ पेमेंट पक्का करें' : '✅ Confirm Payment',
+        filterAll: language === 'hi' ? 'सब' : 'All',
+        filterUdhar: language === 'hi' ? 'बकाया' : 'Udhar',
+        filterPaid: language === 'hi' ? 'जमा' : 'Paid',
+    };
 
     const formatDate = (dateStr: string) => {
-        return new Date(dateStr).toLocaleDateString('en-IN', {
+        return new Date(dateStr).toLocaleDateString(language === 'hi' ? 'hi-IN' : 'en-IN', {
             day: 'numeric',
             month: 'short',
             year: 'numeric',
@@ -69,32 +101,25 @@ export default function CustomerDetailScreen({ navigation, route }: CustomerDeta
     const getTypeInfo = (type: string) => {
         switch (type) {
             case 'credit':
-                return { label: 'UDHAR', color: COLORS.danger, bg: COLORS.dangerLight };
+                return { label: language === 'hi' ? 'बकाया' : 'UDHAR', color: COLORS.danger, bg: COLORS.dangerLight };
             case 'cash':
-                return { label: 'SALE', color: COLORS.success, bg: COLORS.successLight };
-            case 'expense':
-                return { label: 'PURCHASE', color: COLORS.purchase, bg: COLORS.purchaseLight };
+                return { label: language === 'hi' ? 'जमा' : 'PAID', color: COLORS.success, bg: COLORS.successLight };
             default:
                 return { label: 'OTHER', color: COLORS.textMuted, bg: COLORS.background };
         }
     };
 
-    // Collect Payment mutation
     const paymentMutation = useMutation({
         mutationFn: createTransaction,
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['customerTransactions', customerId] });
             queryClient.invalidateQueries({ queryKey: ['customers'] });
             queryClient.invalidateQueries({ queryKey: ['transactions'] });
-            syncSubscriptionStatus(); // Refresh usage stats
+            syncSubscriptionStatus();
             setShowPaymentModal(false);
-
-            const paid = parseFloat(paymentAmount) || 0;
-            const remaining = Math.max(0, totalUdhar - paid);
-
             Alert.alert(
-                '✅ Payment Received',
-                `Received ${formatCurrency(paid)} from ${customerName}.\n\nRemaining balance: ${formatCurrency(remaining)}`,
+                language === 'hi' ? '✅ पेमेंट मिल गया' : '✅ Payment Received',
+                `${customerName} से ${formatCurrency(parseFloat(paymentAmount))} प्राप्त हुए।`
             );
             setPaymentAmount('');
         },
@@ -103,6 +128,12 @@ export default function CustomerDetailScreen({ navigation, route }: CustomerDeta
         },
     });
 
+    const handleCall = () => {
+        if (customerPhone) {
+            Linking.openURL(`tel:${customerPhone}`);
+        }
+    };
+
     const handleCollectPayment = () => {
         setPaymentAmount(totalUdhar.toString());
         setShowPaymentModal(true);
@@ -110,15 +141,7 @@ export default function CustomerDetailScreen({ navigation, route }: CustomerDeta
 
     const confirmPayment = () => {
         const amount = parseFloat(paymentAmount);
-        if (!amount || amount <= 0) {
-            Alert.alert('Invalid', 'Please enter a valid amount.');
-            return;
-        }
-        if (amount > totalUdhar) {
-            Alert.alert('Too Much', `Amount exceeds outstanding balance of ${formatCurrency(totalUdhar)}.`);
-            return;
-        }
-
+        if (!amount || amount <= 0) return;
         paymentMutation.mutate({
             customerId,
             customerName: customerName || 'Customer',
@@ -131,122 +154,63 @@ export default function CustomerDetailScreen({ navigation, route }: CustomerDeta
         } as any);
     };
 
-    // WhatsApp Reminder
-    const sendWhatsAppReminder = () => {
-        if (!customerPhone) {
-            Alert.alert(
-                'No Phone Number',
-                'Please add customer\'s phone number first.',
-                [{ text: 'OK' }],
-            );
-            return;
-        }
-
-        const language = (useAppStore.getState().language as 'en' | 'hi') || 'en';
-        openWhatsAppReminder(customerPhone, customerName || 'Customer', businessName, totalUdhar, language);
-    };
-
     return (
-        <View style={{ flex: 1, backgroundColor: COLORS.background }}>
+        <View style={styles.container}>
             <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
 
             {/* Header */}
-            <View
-                style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    paddingTop: 52,
-                    paddingHorizontal: 20,
-                    paddingBottom: 16,
-                }}
-            >
-                <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginRight: 16 }}>
-                    <Text style={{ fontSize: 18, color: COLORS.text }}>←</Text>
+            <View style={styles.header}>
+                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                    <Text style={styles.backIcon}>←</Text>
                 </TouchableOpacity>
-                <View
-                    style={{
-                        width: 40,
-                        height: 40,
-                        borderRadius: 20,
-                        backgroundColor: getInitialColor(customerName || 'C'),
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        marginRight: 12,
-                    }}
-                >
-                    <Text style={{ color: COLORS.white, fontSize: 18, fontWeight: '700' }}>
-                        {(customerName || 'C').charAt(0)}
-                    </Text>
+                <View style={[styles.avatar, { backgroundColor: getInitialColor(customerName || 'C') }]}>
+                    <Text style={styles.avatarText}>{(customerName || 'C').charAt(0)}</Text>
                 </View>
                 <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 18, fontWeight: '700', color: COLORS.text }}>
-                        {customerName || 'Customer'}
-                    </Text>
-                    <Text style={{ fontSize: 12, color: COLORS.textMuted }}>
-                        {transactions.length} transactions
-                    </Text>
+                    <Text style={styles.customerNameText}>{customerName || 'Customer'}</Text>
+                    <Text style={styles.txnStatsText}>{transactions.length} {text.transactions}</Text>
                 </View>
 
-                {/* WhatsApp Reminder Button */}
-                {customerPhone ? (
-                    <TouchableOpacity
-                        onPress={sendWhatsAppReminder}
-                        style={{
-                            backgroundColor: '#25D366' + '20',
-                            borderRadius: 12,
-                            paddingHorizontal: 12,
-                            paddingVertical: 8,
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                        }}
-                    >
-                        <Text style={{ fontSize: 16, marginRight: 4 }}>📲</Text>
-                        <Text style={{ fontSize: 12, fontWeight: '600', color: '#25D366' }}>Remind</Text>
-                    </TouchableOpacity>
-                ) : null}
+                <View style={styles.headerActions}>
+                    {customerPhone && (
+                        <>
+                            <TouchableOpacity onPress={handleCall} style={[styles.actionBtn, { backgroundColor: COLORS.primaryLight }]}>
+                                <Text style={styles.actionIcon}>📞</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity 
+                                onPress={() => openWhatsAppReminder(customerPhone, customerName || 'Customer', businessName, totalUdhar, language as any)} 
+                                style={[styles.actionBtn, { backgroundColor: '#25D36620' }]}
+                            >
+                                <Text style={styles.actionIcon}>📲</Text>
+                            </TouchableOpacity>
+                        </>
+                    )}
+                </View>
             </View>
 
             {/* Summary Cards */}
-            <View style={{ flexDirection: 'row', paddingHorizontal: 20, gap: 12, marginBottom: 20 }}>
-                <View
-                    style={{
-                        flex: 1,
-                        backgroundColor: COLORS.successLight,
-                        borderRadius: 12,
-                        padding: 16,
-                        alignItems: 'center',
-                        borderWidth: 1,
-                        borderColor: '#D1FAE5',
-                    }}
-                >
-                    <Text style={{ fontSize: 11, color: COLORS.success, fontWeight: '600' }}>Total Paid</Text>
-                    <Text style={{ fontSize: 18, fontWeight: '800', color: COLORS.success, marginTop: 4 }}>
-                        {formatCurrency(totalCash)}
-                    </Text>
+            <View style={styles.summaryContainer}>
+                <View style={[styles.summaryCard, { backgroundColor: COLORS.successLight, borderColor: '#D1FAE5' }]}>
+                    <Text style={[styles.summaryLabel, { color: COLORS.success }]}>{text.totalPaid}</Text>
+                    <Text style={[styles.summaryValue, { color: COLORS.success }]}>{formatCurrency(totalCash)}</Text>
                 </View>
-                <View
-                    style={{
-                        flex: 1,
-                        backgroundColor: COLORS.dangerLight,
-                        borderRadius: 12,
-                        padding: 16,
-                        alignItems: 'center',
-                        borderWidth: 1,
-                        borderColor: '#FECACA',
-                    }}
-                >
-                    <Text style={{ fontSize: 11, color: COLORS.danger, fontWeight: '600' }}>Outstanding</Text>
-                    <Text style={{ fontSize: 18, fontWeight: '800', color: COLORS.danger, marginTop: 4 }}>
-                        {formatCurrency(totalUdhar)}
-                    </Text>
+                <View style={[styles.summaryCard, { backgroundColor: COLORS.dangerLight, borderColor: '#FECACA' }]}>
+                    <Text style={[styles.summaryLabel, { color: COLORS.danger }]}>{text.outstanding}</Text>
+                    <Text style={[styles.summaryValue, { color: COLORS.danger }]}>{formatCurrency(totalUdhar)}</Text>
                 </View>
             </View>
 
-            {/* Transaction History */}
-            <View style={{ paddingHorizontal: 20, marginBottom: 8 }}>
-                <Text style={{ fontSize: 11, fontWeight: '700', color: COLORS.textMuted, letterSpacing: 1 }}>
-                    TRANSACTION HISTORY
-                </Text>
+            {/* Filter Tabs */}
+            <View style={styles.filterContainer}>
+                <TouchableOpacity onPress={() => setFilter('all')} style={[styles.filterTab, filter === 'all' && styles.filterTabActive]}>
+                    <Text style={[styles.filterTabText, filter === 'all' && styles.filterTabTextActive]}>{text.filterAll}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => setFilter('credit')} style={[styles.filterTab, filter === 'credit' && styles.filterTabActive]}>
+                    <Text style={[styles.filterTabText, filter === 'credit' && styles.filterTabTextActive]}>{text.filterUdhar}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => setFilter('cash')} style={[styles.filterTab, filter === 'cash' && styles.filterTabActive]}>
+                    <Text style={[styles.filterTabText, filter === 'cash' && styles.filterTabTextActive]}>{text.filterPaid}</Text>
+                </TouchableOpacity>
             </View>
 
             <ScrollView
@@ -254,224 +218,82 @@ export default function CustomerDetailScreen({ navigation, route }: CustomerDeta
                 showsVerticalScrollIndicator={false}
                 refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} />}
             >
-                {isLoading && (
-                    <View style={{ paddingVertical: 40, alignItems: 'center' }}>
-                        <ActivityIndicator size="large" color={COLORS.success} />
+                {isLoading ? (
+                    <ActivityIndicator style={{ marginTop: 40 }} color={COLORS.primary} />
+                ) : filteredTransactions.length === 0 ? (
+                    <View style={styles.emptyState}>
+                        <Text style={{ fontSize: 40 }}>📭</Text>
+                        <Text style={styles.emptyText}>{text.noTxns}</Text>
                     </View>
-                )}
-
-                {!isLoading && transactions.length === 0 && (
-                    <View style={{ paddingVertical: 60, alignItems: 'center' }}>
-                        <Text style={{ fontSize: 36, marginBottom: 12 }}>📭</Text>
-                        <Text style={{ fontSize: 14, color: COLORS.textMuted }}>
-                            No transactions with this customer yet
-                        </Text>
-                    </View>
-                )}
-
-                {transactions.map((txn) => {
-                    const typeInfo = getTypeInfo(txn.type);
-                    return (
-                        <View
-                            key={txn.id}
-                            style={{
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                                paddingVertical: 14,
-                                borderBottomWidth: 1,
-                                borderBottomColor: COLORS.border,
-                            }}
-                        >
-                            <View style={{ flex: 1 }}>
-                                <Text style={{ fontSize: 15, fontWeight: '600', color: COLORS.text }}>
-                                    {txn.itemName || 'Items'}
-                                </Text>
-                                <Text style={{ fontSize: 12, color: COLORS.textMuted, marginTop: 2 }}>
-                                    {formatDate(txn.date)}
-                                    {txn.sourceType ? ` · ${txn.sourceType}` : ''}
-                                </Text>
-                            </View>
-                            <View style={{ alignItems: 'flex-end' }}>
-                                <Text style={{ fontSize: 15, fontWeight: '700', color: COLORS.text }}>
-                                    {formatCurrency(txn.price)}
-                                </Text>
-                                <View
-                                    style={{
-                                        backgroundColor: typeInfo.bg,
-                                        paddingHorizontal: 6,
-                                        paddingVertical: 2,
-                                        borderRadius: 4,
-                                        marginTop: 4,
-                                    }}
-                                >
-                                    <Text style={{ fontSize: 9, fontWeight: '700', color: typeInfo.color }}>
-                                        {typeInfo.label}
-                                    </Text>
+                ) : (
+                    filteredTransactions.map((txn) => {
+                        const typeInfo = getTypeInfo(txn.type);
+                        return (
+                            <View key={txn.id} style={styles.txnItem}>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={styles.txnItemTitle}>{txn.itemName || 'Items'}</Text>
+                                    <Text style={styles.txnItemDate}>{formatDate(txn.date)}</Text>
+                                </View>
+                                <View style={{ alignItems: 'flex-end' }}>
+                                    <Text style={styles.txnItemPrice}>{formatCurrency(txn.price)}</Text>
+                                    <View style={[styles.typeBadge, { backgroundColor: typeInfo.bg }]}>
+                                        <Text style={[styles.typeBadgeText, { color: typeInfo.color }]}>{typeInfo.label}</Text>
+                                    </View>
                                 </View>
                             </View>
-                        </View>
-                    );
-                })}
-                <View style={{ height: totalUdhar > 0 ? 100 : 40 }} />
+                        );
+                    })
+                )}
+                <View style={{ height: totalUdhar > 0 ? 120 : 40 }} />
             </ScrollView>
 
-            {/* Collect Payment Button — Fixed at Bottom */}
+            {/* Collect Payment Button */}
             {totalUdhar > 0 && !isLoading && (
-                <View
-                    style={{
-                        position: 'absolute',
-                        bottom: 0,
-                        left: 0,
-                        right: 0,
-                        paddingHorizontal: 20,
-                        paddingBottom: Platform.OS === 'ios' ? 34 : 20,
-                        paddingTop: 12,
-                        backgroundColor: COLORS.background,
-                        borderTopWidth: 1,
-                        borderTopColor: COLORS.border,
-                    }}
-                >
-                    <TouchableOpacity
-                        onPress={handleCollectPayment}
-                        activeOpacity={0.85}
-                        style={{
-                            backgroundColor: COLORS.success,
-                            borderRadius: 14,
-                            paddingVertical: 16,
-                            alignItems: 'center',
-                            shadowColor: COLORS.success,
-                            shadowOffset: { width: 0, height: 4 },
-                            shadowOpacity: 0.3,
-                            shadowRadius: 8,
-                            elevation: 4,
-                        }}
-                    >
-                        <Text style={{ fontSize: 17, fontWeight: '800', color: COLORS.white }}>
-                            💰 Collect Payment {formatCurrency(totalUdhar)}
-                        </Text>
+                <View style={styles.bottomBar}>
+                    <TouchableOpacity onPress={handleCollectPayment} style={styles.collectButton}>
+                        <Text style={styles.collectButtonText}>{text.collectBtn} {formatCurrency(totalUdhar)}</Text>
                     </TouchableOpacity>
                 </View>
             )}
 
             {/* Payment Modal */}
-            <Modal
-                visible={showPaymentModal}
-                transparent
-                animationType="slide"
-                onRequestClose={() => setShowPaymentModal(false)}
-            >
-                <View
-                    style={{
-                        flex: 1,
-                        backgroundColor: 'rgba(0,0,0,0.5)',
-                        justifyContent: 'flex-end',
-                    }}
-                >
-                    <View
-                        style={{
-                            backgroundColor: COLORS.background,
-                            borderTopLeftRadius: 24,
-                            borderTopRightRadius: 24,
-                            paddingTop: 8,
-                            paddingBottom: Platform.OS === 'ios' ? 40 : 24,
-                            paddingHorizontal: 24,
-                        }}
-                    >
-                        {/* Handle bar */}
-                        <View style={{ alignItems: 'center', marginBottom: 20 }}>
-                            <View
-                                style={{
-                                    width: 40,
-                                    height: 4,
-                                    borderRadius: 2,
-                                    backgroundColor: COLORS.border,
-                                }}
-                            />
-                        </View>
+            <Modal visible={showPaymentModal} transparent animationType="slide">
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        <View style={styles.modalHandle} />
+                        <Text style={styles.modalTitle}>{text.collectTitle}</Text>
+                        <Text style={styles.modalSubTitle}>{text.from} {customerName} · {text.outstanding}: {formatCurrency(totalUdhar)}</Text>
 
-                        {/* Title */}
-                        <Text style={{ fontSize: 20, fontWeight: '800', color: COLORS.text, marginBottom: 4 }}>
-                            Collect Payment
-                        </Text>
-                        <Text style={{ fontSize: 14, color: COLORS.textMuted, marginBottom: 24 }}>
-                            From {customerName || 'Customer'} · Outstanding: {formatCurrency(totalUdhar)}
-                        </Text>
-
-                        {/* Amount Input */}
-                        <Text style={{ fontSize: 13, fontWeight: '600', color: COLORS.textMuted, marginBottom: 8, letterSpacing: 0.5 }}>
-                            PAYMENT AMOUNT
-                        </Text>
-                        <View
-                            style={{
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                                backgroundColor: COLORS.card,
-                                borderRadius: 12,
-                                borderWidth: 2,
-                                borderColor: COLORS.success,
-                                paddingHorizontal: 16,
-                                marginBottom: 8,
-                            }}
-                        >
-                            <Text style={{ fontSize: 24, fontWeight: '700', color: COLORS.success, marginRight: 4 }}>₹</Text>
+                        <View style={styles.modalInputWrapper}>
+                            <Text style={styles.currencySymbol}>₹</Text>
                             <TextInput
                                 value={paymentAmount}
                                 onChangeText={setPaymentAmount}
                                 keyboardType="numeric"
+                                style={styles.modalInput}
                                 autoFocus
-                                style={{
-                                    flex: 1,
-                                    fontSize: 28,
-                                    fontWeight: '800',
-                                    color: COLORS.text,
-                                    paddingVertical: 16,
-                                }}
-                                placeholder="0"
-                                placeholderTextColor={COLORS.textMuted}
                             />
                         </View>
-                        <Text style={{ fontSize: 12, color: COLORS.textMuted, marginBottom: 24 }}>
-                            You can collect a partial payment too
-                        </Text>
 
-                        {/* Buttons */}
-                        <View style={{ flexDirection: 'row', gap: 12 }}>
-                            <TouchableOpacity
-                                onPress={() => {
-                                    setShowPaymentModal(false);
-                                    setPaymentAmount('');
-                                }}
-                                style={{
-                                    flex: 1,
-                                    backgroundColor: COLORS.card,
-                                    borderRadius: 12,
-                                    paddingVertical: 14,
-                                    alignItems: 'center',
-                                    borderWidth: 1,
-                                    borderColor: COLORS.border,
-                                }}
-                            >
-                                <Text style={{ fontSize: 15, fontWeight: '600', color: COLORS.text }}>Cancel</Text>
+                        {/* Quick Amounts */}
+                        <View style={styles.quickAmountContainer}>
+                            {[500, 1000, 2000, 5000].map(amt => (
+                                <TouchableOpacity 
+                                    key={amt} 
+                                    onPress={() => setPaymentAmount(amt.toString())}
+                                    style={styles.quickAmountBtn}
+                                >
+                                    <Text style={styles.quickAmountText}>+₹{amt}</Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+
+                        <View style={{ flexDirection: 'row', gap: 12, marginTop: 20 }}>
+                            <TouchableOpacity onPress={() => setShowPaymentModal(false)} style={styles.cancelBtn}>
+                                <Text style={styles.cancelBtnText}>{text.cancel}</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity
-                                onPress={confirmPayment}
-                                disabled={paymentMutation.isPending}
-                                style={{
-                                    flex: 2,
-                                    backgroundColor: COLORS.success,
-                                    borderRadius: 12,
-                                    paddingVertical: 14,
-                                    alignItems: 'center',
-                                    opacity: paymentMutation.isPending ? 0.7 : 1,
-                                }}
-                            >
-                                {paymentMutation.isPending ? (
-                                    <ActivityIndicator color={COLORS.white} />
-                                ) : (
-                                    <Text style={{ fontSize: 15, fontWeight: '700', color: COLORS.white }}>
-                                        ✅ Confirm Payment
-                                    </Text>
-                                )}
+                            <TouchableOpacity onPress={confirmPayment} style={styles.confirmBtn} disabled={paymentMutation.isPending}>
+                                {paymentMutation.isPending ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.confirmBtnText}>{text.confirm}</Text>}
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -480,3 +302,52 @@ export default function CustomerDetailScreen({ navigation, route }: CustomerDeta
         </View>
     );
 }
+
+const styles = StyleSheet.create({
+    container: { flex: 1, backgroundColor: COLORS.background },
+    header: { flexDirection: 'row', alignItems: 'center', paddingTop: 60, paddingHorizontal: 20, paddingBottom: 16 },
+    backButton: { marginRight: 16, padding: 4 },
+    backIcon: { fontSize: 24, color: COLORS.text },
+    avatar: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+    avatarText: { color: COLORS.white, fontSize: 20, fontWeight: '700' },
+    customerNameText: { fontSize: 20, fontWeight: '700', color: COLORS.text },
+    txnStatsText: { fontSize: 13, color: COLORS.textMuted },
+    headerActions: { flexDirection: 'row', gap: 8 },
+    actionBtn: { width: 40, height: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
+    actionIcon: { fontSize: 18 },
+    summaryContainer: { flexDirection: 'row', paddingHorizontal: 20, gap: 12, marginBottom: 20 },
+    summaryCard: { flex: 1, borderRadius: 16, padding: 16, alignItems: 'center', borderWidth: 1 },
+    summaryLabel: { fontSize: 12, fontWeight: '700' },
+    summaryValue: { fontSize: 20, fontWeight: '800', marginTop: 4 },
+    filterContainer: { flexDirection: 'row', paddingHorizontal: 20, marginBottom: 16, gap: 8 },
+    filterTab: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: COLORS.card, borderWidth: 1, borderColor: COLORS.border },
+    filterTabActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+    filterTabText: { fontSize: 13, fontWeight: '600', color: COLORS.textMuted },
+    filterTabTextActive: { color: COLORS.white },
+    emptyState: { paddingVertical: 80, alignItems: 'center' },
+    emptyText: { fontSize: 15, color: COLORS.textMuted, marginTop: 12 },
+    txnItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: COLORS.border },
+    txnItemTitle: { fontSize: 16, fontWeight: '600', color: COLORS.text },
+    txnItemDate: { fontSize: 12, color: COLORS.textMuted, marginTop: 4 },
+    txnItemPrice: { fontSize: 16, fontWeight: '700', color: COLORS.text },
+    typeBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, marginTop: 6 },
+    typeBadgeText: { fontSize: 10, fontWeight: '800' },
+    bottomBar: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 20, paddingBottom: Platform.OS === 'ios' ? 34 : 20, paddingTop: 16, backgroundColor: COLORS.white, borderTopWidth: 1, borderTopColor: COLORS.border },
+    collectButton: { backgroundColor: COLORS.success, borderRadius: 16, paddingVertical: 18, alignItems: 'center' },
+    collectButtonText: { fontSize: 18, fontWeight: '800', color: COLORS.white },
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+    modalContent: { backgroundColor: COLORS.background, borderTopLeftRadius: 30, borderTopRightRadius: 30, padding: 24, paddingBottom: Platform.OS === 'ios' ? 44 : 30 },
+    modalHandle: { width: 40, height: 5, borderRadius: 3, backgroundColor: COLORS.border, alignSelf: 'center', marginBottom: 20 },
+    modalTitle: { fontSize: 22, fontWeight: '800', color: COLORS.text },
+    modalSubTitle: { fontSize: 14, color: COLORS.textMuted, marginTop: 4, marginBottom: 24 },
+    modalInputWrapper: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.card, borderRadius: 16, borderWidth: 2, borderColor: COLORS.success, paddingHorizontal: 20 },
+    currencySymbol: { fontSize: 30, fontWeight: '700', color: COLORS.success, marginRight: 8 },
+    modalInput: { flex: 1, fontSize: 32, fontWeight: '800', color: COLORS.text, paddingVertical: 16 },
+    quickAmountContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 16 },
+    quickAmountBtn: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, backgroundColor: COLORS.primaryLight, borderWidth: 1, borderColor: COLORS.primary },
+    quickAmountText: { fontSize: 14, fontWeight: '700', color: COLORS.primary },
+    cancelBtn: { flex: 1, paddingVertical: 16, borderRadius: 14, alignItems: 'center', backgroundColor: COLORS.card, borderWidth: 1, borderColor: COLORS.border },
+    cancelBtnText: { fontSize: 16, fontWeight: '600', color: COLORS.text },
+    confirmBtn: { flex: 2, paddingVertical: 16, borderRadius: 14, alignItems: 'center', backgroundColor: COLORS.success },
+    confirmBtnText: { fontSize: 16, fontWeight: '700', color: COLORS.white },
+});

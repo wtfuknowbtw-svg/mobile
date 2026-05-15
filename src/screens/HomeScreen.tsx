@@ -11,7 +11,9 @@ import {
     ActivityIndicator,
     RefreshControl,
     Alert,
+    FlatList,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { COLORS } from '../constants';
 import { useAppStore } from '../store/useAppStore';
@@ -156,6 +158,21 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
         }
     };
 
+    const getTodayDate = () => {
+        const today = new Date();
+        return today.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+    };
+
+    const getCustomerInitial = (name: string) => {
+        return name ? name.charAt(0).toUpperCase() : '?';
+    };
+
+    const getAvatarColor = (name: string) => {
+        const colors = ['#1A3C6E', '#F5A623', '#2ECC71', '#E74C3C', '#9B59B6', '#3498DB'];
+        const index = name.charCodeAt(0) % colors.length;
+        return colors[index];
+    };
+
     const handleEditOption = (transaction: Transaction) => {
         navigation.navigate('EditTransaction', { transaction });
         setShowEditOptions(null);
@@ -184,381 +201,396 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
         setShowEditOptions(null);
     };
 
+    const renderTransactionItem = ({ item }: { item: Transaction }) => {
+        const isCredit = item.type === 'credit';
+        return (
+            <TouchableOpacity
+                onPress={() => {
+                    setSelectedTxn(item);
+                    setShowTxnDetails(true);
+                }}
+                activeOpacity={0.7}
+                style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    backgroundColor: COLORS.card,
+                    height: 72,
+                    paddingHorizontal: 16,
+                    borderBottomWidth: 1,
+                    borderBottomColor: COLORS.border,
+                }}
+            >
+                <View
+                    style={{
+                        width: 44,
+                        height: 44,
+                        borderRadius: 22,
+                        backgroundColor: getAvatarColor(item.customerName || 'Unknown'),
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        marginRight: 12,
+                    }}
+                >
+                    <Text style={{ fontSize: 18, fontWeight: '700', color: COLORS.white }}>
+                        {getCustomerInitial(item.customerName || 'Unknown')}
+                    </Text>
+                </View>
+
+                <View style={{ flex: 1 }}>
+                    <Text
+                        style={{
+                            fontSize: 15,
+                            fontWeight: '700',
+                            color: COLORS.text,
+                            marginBottom: 2,
+                        }}
+                    >
+                        {item.customerName || 'Unknown'}
+                    </Text>
+                    <Text
+                        style={{
+                            fontSize: 13,
+                            color: COLORS.textMuted,
+                        }}
+                    >
+                        {item.itemName || 'Items'}
+                    </Text>
+                </View>
+
+                <View style={{ alignItems: 'flex-end' }}>
+                    <Text
+                        style={{
+                            fontSize: 16,
+                            fontWeight: '700',
+                            color: isCredit ? COLORS.danger : COLORS.success,
+                            marginBottom: 2,
+                        }}
+                    >
+                        {isCredit ? '-' : '+'}{formatCurrency(item.price)}
+                    </Text>
+                    <Text
+                        style={{
+                            fontSize: 11,
+                            color: COLORS.textMuted,
+                        }}
+                    >
+                        {formatDate(item.date)}
+                    </Text>
+                </View>
+            </TouchableOpacity>
+        );
+    };
+
     return (
         <View style={{ flex: 1, backgroundColor: COLORS.background }}>
             <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
 
-            {/* Header */}
+            {/* Fixed Header Section */}
             <View
                 style={{
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    paddingTop: 32,
+                    paddingTop: 44,
                     paddingHorizontal: 20,
                     paddingBottom: 16,
                     backgroundColor: COLORS.background,
                 }}
             >
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Text style={{ fontSize: 13, marginRight: 8 }}>📒</Text>
-                    <Text style={{ fontSize: 22, fontWeight: '800', color: COLORS.text }}>
-                        <Text style={{ color: COLORS.success }}>Apna</Text>
-                        <Text style={{ color: COLORS.orange }}>Khata</Text>
-                    </Text>
-                </View>
-                <View style={{ flexDirection: 'row', gap: 12 }}>
-                    <TouchableOpacity
-                        style={{
-                            width: 36,
-                            height: 36,
-                            borderRadius: 18,
-                            backgroundColor: COLORS.orangeLight,
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                        }}
-                    >
-                        <Text style={{ fontSize: 16 }}>🔔</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        onPress={() => navigation.navigate('Settings')}
-                        style={{
-                            width: 36,
-                            height: 36,
-                            borderRadius: 18,
-                            backgroundColor: COLORS.primaryLight,
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                        }}
-                    >
-                        <Text style={{ fontSize: 16 }}>👤</Text>
-                    </TouchableOpacity>
-                </View>
-            </View>
-
-            {/* Upgrade Banner for free plan users */}
-            {plan === 'free' && usage.transactions.isLimitReached && (
-                <UpgradeBanner
-                    compact
-                    feature="transactions"
-                    message="You've reached the free plan limit (50 txns/mo)"
-                    onUpgrade={() => navigation.navigate('Upgrade')}
-                />
-            )}
-
-            {/* Stats Row */}
-            <View
-                style={{
-                    flexDirection: 'row',
-                    marginHorizontal: 20,
-                    borderRadius: 12,
-                    overflow: 'hidden',
-                    marginBottom: 20,
-                }}
-            >
                 <View
                     style={{
-                        flex: 1,
-                        backgroundColor: COLORS.success,
-                        paddingVertical: 14,
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
                         alignItems: 'center',
                     }}
                 >
-                    <Text style={{ color: '#A7F3D0', fontSize: 11, fontWeight: '500' }}>
-                        {i18n.t('home.todaySales')}
-                    </Text>
-                    <Text
-                        style={{
-                            color: COLORS.white,
-                            fontSize: 18,
-                            fontWeight: '800',
-                            marginTop: 2,
-                        }}
-                    >
-                        {formatCurrency(dashboardStats.todaySales)}
-                    </Text>
-                </View>
-                <View
-                    style={{
-                        flex: 1,
-                        backgroundColor: COLORS.danger,
-                        paddingVertical: 14,
-                        alignItems: 'center',
-                    }}
-                >
-                    <Text style={{ color: '#FECACA', fontSize: 11, fontWeight: '500' }}>
-                        {i18n.t('home.totalUdhar')}
-                    </Text>
-                    <Text
-                        style={{
-                            color: COLORS.white,
-                            fontSize: 18,
-                            fontWeight: '800',
-                            marginTop: 2,
-                        }}
-                    >
-                        {formatCurrency(dashboardStats.totalUdhar)}
-                    </Text>
-                </View>
-                <View
-                    style={{
-                        flex: 1,
-                        backgroundColor: COLORS.orange,
-                        paddingVertical: 14,
-                        alignItems: 'center',
-                    }}
-                >
-                    <Text style={{ color: '#FEF3C7', fontSize: 11, fontWeight: '500' }}>
-                        {i18n.t('home.thisWeek')}
-                    </Text>
-                    <Text
-                        style={{
-                            color: COLORS.white,
-                            fontSize: 18,
-                            fontWeight: '800',
-                            marginTop: 2,
-                        }}
-                    >
-                        {formatCurrency(dashboardStats.thisWeek)}
-                    </Text>
+                    <View>
+                        <Text style={{ fontSize: 20, fontWeight: '700', color: COLORS.text }}>
+                            {business?.name ? `नमस्ते, ${business.name}!` : 'नमस्ते!'}
+                        </Text>
+                        <Text style={{ fontSize: 13, color: COLORS.textMuted, marginTop: 4 }}>
+                            {getTodayDate()}
+                        </Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 12 }}>
+                        <TouchableOpacity
+                            style={{
+                                width: 40,
+                                height: 40,
+                                borderRadius: 20,
+                                backgroundColor: COLORS.card,
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                                shadowColor: '#000',
+                                shadowOffset: { width: 0, height: 2 },
+                                shadowOpacity: 0.1,
+                                shadowRadius: 4,
+                                elevation: 3,
+                            }}
+                        >
+                            <Ionicons name="notifications-outline" size={20} color={COLORS.primary} />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            onPress={() => navigation.navigate('Settings')}
+                            style={{
+                                width: 40,
+                                height: 40,
+                                borderRadius: 20,
+                                backgroundColor: COLORS.card,
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                                shadowColor: '#000',
+                                shadowOffset: { width: 0, height: 2 },
+                                shadowOpacity: 0.1,
+                                shadowRadius: 4,
+                                elevation: 3,
+                            }}
+                        >
+                            <Ionicons name="person-outline" size={20} color={COLORS.primary} />
+                        </TouchableOpacity>
+                    </View>
                 </View>
             </View>
 
-            {/* Usage Progress Bar for Free Plan */}
-            {plan === 'free' && (
-                <View style={{ paddingHorizontal: 20, marginBottom: 16 }}>
-                    <UsageProgressBar
-                        current={usage.transactions.current}
-                        limit={usage.transactions.limit}
-                        label="Transactions"
-                        showWarning={true}
-                        color={COLORS.success}
-                    />
-                </View>
-            )}
-
-            {/* Outstanding Udhar List */}
-            <View style={{ paddingHorizontal: 20, marginBottom: 8 }}>
-                <Text
-                    style={{
-                        fontSize: 12,
-                        fontWeight: '700',
-                        color: COLORS.textMuted,
-                        letterSpacing: 1,
-                    }}
-                >
-                    OUTSTANDING UDHAR
-                </Text>
-            </View>
-
+            {/* Scrollable Content */}
             <ScrollView
-                style={{ flex: 1, paddingHorizontal: 20 }}
+                style={{ flex: 1 }}
                 showsVerticalScrollIndicator={false}
                 refreshControl={
                     <RefreshControl refreshing={isRefetching} onRefresh={refetch} />
                 }
             >
+                {/* Upgrade Banner for free plan users */}
+                {plan === 'free' && usage.transactions.isLimitReached && (
+                    <UpgradeBanner
+                        compact
+                        feature="transactions"
+                        message="You've reached the free plan limit (50 txns/mo)"
+                        onUpgrade={() => navigation.navigate('Upgrade')}
+                    />
+                )}
+
+                {/* Summary Card */}
+                <View style={{ paddingHorizontal: 20, marginBottom: 20 }}>
+                    <View
+                        style={{
+                            backgroundColor: COLORS.primary,
+                            borderRadius: 16,
+                            padding: 20,
+                            shadowColor: COLORS.primary,
+                            shadowOffset: { width: 0, height: 4 },
+                            shadowOpacity: 0.3,
+                            shadowRadius: 8,
+                            elevation: 4,
+                        }}
+                    >
+                        <Text style={{ fontSize: 14, color: 'rgba(255,255,255,0.8)', fontWeight: '600' }}>
+                            कुल बकाया
+                        </Text>
+                        <Text
+                            style={{
+                                fontSize: 36,
+                                fontWeight: '800',
+                                color: COLORS.white,
+                                marginTop: 8,
+                            }}
+                        >
+                            {formatCurrency(dashboardStats.totalUdhar)}
+                        </Text>
+
+                        <View style={{ flexDirection: 'row', marginTop: 20, gap: 20 }}>
+                            <View style={{ flex: 1 }}>
+                                <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', marginBottom: 4 }}>
+                                    दिया उधार
+                                </Text>
+                                <Text style={{ fontSize: 18, fontWeight: '700', color: '#FECACA' }}>
+                                    {formatCurrency(dashboardStats.totalUdhar)}
+                                </Text>
+                            </View>
+                            <View style={{ flex: 1 }}>
+                                <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', marginBottom: 4 }}>
+                                    वापस मिला
+                                </Text>
+                                <Text style={{ fontSize: 18, fontWeight: '700', color: '#A7F3D0' }}>
+                                    {formatCurrency(dashboardStats.todaySales)}
+                                </Text>
+                            </View>
+                        </View>
+                    </View>
+                </View>
+
+                {/* Quick Action Buttons */}
+                <View style={{ paddingHorizontal: 20, marginBottom: 20 }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 12 }}>
+                        <TouchableOpacity
+                            onPress={() => {
+                                if (!canCreateTransaction()) {
+                                    Alert.alert(
+                                        'Transaction Limit Reached',
+                                        getUpgradeMessage('transactions'),
+                                        [
+                                            { text: 'Cancel', style: 'cancel' },
+                                            { text: getUpgradeCTA('transactions'), onPress: () => navigation.navigate('Upgrade') },
+                                        ]
+                                    );
+                                    return;
+                                }
+                                openSheet();
+                            }}
+                            style={{ flex: 1, alignItems: 'center' }}
+                        >
+                            <View
+                                style={{
+                                    width: 60,
+                                    height: 60,
+                                    borderRadius: 16,
+                                    backgroundColor: COLORS.card,
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                    marginBottom: 8,
+                                    shadowColor: '#000',
+                                    shadowOffset: { width: 0, height: 2 },
+                                    shadowOpacity: 0.1,
+                                    shadowRadius: 4,
+                                    elevation: 3,
+                                }}
+                            >
+                                <Ionicons name="add-circle-outline" size={28} color={COLORS.primary} />
+                            </View>
+                            <Text style={{ fontSize: 12, fontWeight: '600', color: COLORS.text }}>उधार दें</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            onPress={() => navigation.navigate('UdharPayment')}
+                            style={{ flex: 1, alignItems: 'center' }}
+                        >
+                            <View
+                                style={{
+                                    width: 60,
+                                    height: 60,
+                                    borderRadius: 16,
+                                    backgroundColor: COLORS.card,
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                    marginBottom: 8,
+                                    shadowColor: '#000',
+                                    shadowOffset: { width: 0, height: 2 },
+                                    shadowOpacity: 0.1,
+                                    shadowRadius: 4,
+                                    elevation: 3,
+                                }}
+                            >
+                                <Ionicons name="checkmark-circle-outline" size={28} color={COLORS.primary} />
+                            </View>
+                            <Text style={{ fontSize: 12, fontWeight: '600', color: COLORS.text }}>पेमेंट लें</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            onPress={() => navigation.navigate('Customers')}
+                            style={{ flex: 1, alignItems: 'center' }}
+                        >
+                            <View
+                                style={{
+                                    width: 60,
+                                    height: 60,
+                                    borderRadius: 16,
+                                    backgroundColor: COLORS.card,
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                    marginBottom: 8,
+                                    shadowColor: '#000',
+                                    shadowOffset: { width: 0, height: 2 },
+                                    shadowOpacity: 0.1,
+                                    shadowRadius: 4,
+                                    elevation: 3,
+                                }}
+                            >
+                                <Ionicons name="people-outline" size={28} color={COLORS.primary} />
+                            </View>
+                            <Text style={{ fontSize: 12, fontWeight: '600', color: COLORS.text }}>ग्राहक</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            onPress={() => navigation.navigate('Reports')}
+                            style={{ flex: 1, alignItems: 'center' }}
+                        >
+                            <View
+                                style={{
+                                    width: 60,
+                                    height: 60,
+                                    borderRadius: 16,
+                                    backgroundColor: COLORS.card,
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                    marginBottom: 8,
+                                    shadowColor: '#000',
+                                    shadowOffset: { width: 0, height: 2 },
+                                    shadowOpacity: 0.1,
+                                    shadowRadius: 4,
+                                    elevation: 3,
+                                }}
+                            >
+                                <Ionicons name="bar-chart-outline" size={28} color={COLORS.primary} />
+                            </View>
+                            <Text style={{ fontSize: 12, fontWeight: '600', color: COLORS.text }}>रिपोर्ट</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+
+                {/* Usage Progress Bar for Free Plan */}
+                {plan === 'free' && (
+                    <View style={{ paddingHorizontal: 20, marginBottom: 16 }}>
+                        <UsageProgressBar
+                            current={usage.transactions.current}
+                            limit={usage.transactions.limit}
+                            label="Transactions"
+                            showWarning={true}
+                            color={COLORS.success}
+                        />
+                    </View>
+                )}
+
+                {/* Transaction History Section */}
+                <View style={{ paddingHorizontal: 20, marginBottom: 12 }}>
+                    <Text
+                        style={{
+                            fontSize: 16,
+                            fontWeight: '700',
+                            color: COLORS.text,
+                        }}
+                    >
+                        हाल के लेन-देन
+                    </Text>
+                </View>
+
                 {isLoading && (
                     <View style={{ paddingVertical: 40, alignItems: 'center' }}>
-                        <ActivityIndicator size="large" color={COLORS.success} />
+                        <ActivityIndicator size="large" color={COLORS.primary} />
                         <Text style={{ color: COLORS.textMuted, marginTop: 8 }}>Loading...</Text>
                     </View>
                 )}
 
-                {!isLoading && activeUdharCustomers.length === 0 && (
+                {!isLoading && recentTransactions.length === 0 && (
                     <View style={{ paddingVertical: 60, alignItems: 'center' }}>
-                        <Text style={{ fontSize: 48, marginBottom: 16 }}>🎉</Text>
-                        <Text style={{ fontSize: 16, fontWeight: '600', color: COLORS.text }}>
-                            No outstanding udhar
+                        <Ionicons name="document-text-outline" size={48} color={COLORS.textMuted} />
+                        <Text style={{ fontSize: 16, fontWeight: '600', color: COLORS.text, marginTop: 16 }}>
+                            कोई लेन-देन नहीं
                         </Text>
                         <Text style={{ fontSize: 13, color: COLORS.textMuted, marginTop: 4, textAlign: 'center' }}>
-                            All customers have paid their dues!{'\n'}Tap + to add new transactions
+                            Tap + to add your first transaction
                         </Text>
                     </View>
                 )}
 
-                {activeUdharCustomers.map((customer) => {
-                    return (
-                        <View key={customer.name} style={{
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            paddingVertical: 14,
-                            borderBottomWidth: 1,
-                            borderBottomColor: COLORS.border,
-                        }}>
-                            <TouchableOpacity
-                                activeOpacity={0.7}
-                                onPress={() => {
-                                    if (customer.lastTransaction) {
-                                        setSelectedTxn(customer.lastTransaction);
-                                        setShowTxnDetails(true);
-                                    }
-                                }}
-                                style={{ flex: 1 }}
-                            >
-                                <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                                    <View style={{ flex: 1 }}>
-                                        <Text
-                                            style={{
-                                                fontSize: 16,
-                                                fontWeight: '600',
-                                                color: COLORS.text,
-                                            }}
-                                        >
-                                            {customer.name}
-                                        </Text>
-                                        <Text
-                                            style={{
-                                                fontSize: 13,
-                                                color: COLORS.textMuted,
-                                                marginTop: 2,
-                                            }}
-                                        >
-                                            Outstanding Udhar
-                                        </Text>
-                                    </View>
-                                    <View style={{ alignItems: 'flex-end' }}>
-                                        <Text
-                                            style={{
-                                                fontSize: 18,
-                                                fontWeight: '700',
-                                                color: COLORS.danger,
-                                            }}
-                                        >
-                                            {formatCurrency(customer.totalUdhar)}
-                                        </Text>
-                                        <View
-                                            style={{
-                                                backgroundColor: COLORS.dangerLight,
-                                                paddingHorizontal: 8,
-                                                paddingVertical: 2,
-                                                borderRadius: 4,
-                                                marginTop: 4,
-                                            }}
-                                        >
-                                            <Text
-                                                style={{
-                                                    fontSize: 10,
-                                                    fontWeight: '700',
-                                                    color: COLORS.danger,
-                                                }}
-                                            >
-                                                UDHAR
-                                            </Text>
-                                        </View>
-                                    </View>
-                                </View>
-                            </TouchableOpacity>
-                            
-                            {/* Edit/Delete Options */}
-                            <TouchableOpacity
-                                onPress={() => customer.lastTransaction && setShowEditOptions(customer.lastTransaction)}
-                                style={{
-                                    padding: 8,
-                                    marginLeft: 8,
-                                }}
-                            >
-                                <Text style={{ fontSize: 16, color: COLORS.textMuted }}>⋮</Text>
-                            </TouchableOpacity>
-                        </View>
-                    );
-                })}
-
-                {/* Recent Transactions Section */}
-                {recentTransactions.length > 0 && (
-                    <>
-                        <View style={{ paddingHorizontal: 20, marginTop: 24, marginBottom: 8 }}>
-                            <Text
-                                style={{
-                                    fontSize: 12,
-                                    fontWeight: '700',
-                                    color: COLORS.textMuted,
-                                    letterSpacing: 1,
-                                }}
-                            >
-                                RECENT TRANSACTIONS
-                            </Text>
-                        </View>
-
-                        {recentTransactions.slice(0, 10).map((txn) => {
-                            const typeInfo = getTypeLabel(txn.type);
-                            return (
-                                <View key={txn.id} style={{
-                                    flexDirection: 'row',
-                                    alignItems: 'center',
-                                    paddingVertical: 12,
-                                    borderBottomWidth: 1,
-                                    borderBottomColor: COLORS.border,
-                                    opacity: 0.8,
-                                }}>
-                                    <TouchableOpacity
-                                        activeOpacity={0.7}
-                                        onPress={() => {
-                                            setSelectedTxn(txn);
-                                            setShowTxnDetails(true);
-                                        }}
-                                        style={{ flex: 1 }}
-                                    >
-                                        <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                                            <View style={{ flex: 1 }}>
-                                                <Text
-                                                    style={{
-                                                        fontSize: 15,
-                                                        fontWeight: '500',
-                                                        color: COLORS.text,
-                                                    }}
-                                                >
-                                                    {txn.customerName || 'Unknown'}
-                                                </Text>
-                                                <Text
-                                                    style={{
-                                                        fontSize: 12,
-                                                        color: COLORS.textMuted,
-                                                        marginTop: 1,
-                                                    }}
-                                                >
-                                                    {txn.itemName || 'Items'} · {formatDate(txn.date)}
-                                                </Text>
-                                            </View>
-                                            <View style={{ alignItems: 'flex-end' }}>
-                                                <Text
-                                                    style={{
-                                                        fontSize: 15,
-                                                        fontWeight: '600',
-                                                        color: COLORS.text,
-                                                    }}
-                                                >
-                                                    {formatCurrency(txn.price)}
-                                                </Text>
-                                                <View
-                                                    style={{
-                                                        backgroundColor: typeInfo.bg,
-                                                        paddingHorizontal: 6,
-                                                        paddingVertical: 1,
-                                                        borderRadius: 3,
-                                                        marginTop: 2,
-                                                    }}
-                                                >
-                                                    <Text
-                                                        style={{
-                                                            fontSize: 9,
-                                                            fontWeight: '700',
-                                                            color: typeInfo.color,
-                                                        }}
-                                                    >
-                                                        {typeInfo.label}
-                                                    </Text>
-                                                </View>
-                                            </View>
-                                        </View>
-                                    </TouchableOpacity>
-                                </View>
-                            );
-                        })}
-                    </>
+                {!isLoading && recentTransactions.length > 0 && (
+                    <View style={{ backgroundColor: COLORS.card, borderTopWidth: 1, borderTopColor: COLORS.border }}>
+                        <FlatList
+                            data={recentTransactions.slice(0, 10)}
+                            renderItem={renderTransactionItem}
+                            keyExtractor={(item) => item.id}
+                            scrollEnabled={false}
+                        />
+                    </View>
                 )}
 
-                <View style={{ height: 80 }} />
+                <View style={{ height: 100 }} />
             </ScrollView>
 
             {/* FAB */}
@@ -591,19 +623,17 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
                     width: 56,
                     height: 56,
                     borderRadius: 16,
-                    backgroundColor: canCreateTransaction() ? COLORS.success : COLORS.textMuted,
+                    backgroundColor: canCreateTransaction() ? COLORS.primary : COLORS.textMuted,
                     justifyContent: 'center',
                     alignItems: 'center',
-                    shadowColor: canCreateTransaction() ? COLORS.success : 'transparent',
+                    shadowColor: canCreateTransaction() ? COLORS.primary : 'transparent',
                     shadowOffset: { width: 0, height: 4 },
                     shadowOpacity: canCreateTransaction() ? 0.4 : 0,
                     shadowRadius: 8,
                     elevation: canCreateTransaction() ? 8 : 0,
                 }}
             >
-                <Text style={{ fontSize: 28, color: COLORS.white, fontWeight: '300' }}>
-                    +
-                </Text>
+                <Ionicons name="add" size={28} color={COLORS.white} />
             </TouchableOpacity>
 
             {/* Add Transaction Bottom Sheet */}

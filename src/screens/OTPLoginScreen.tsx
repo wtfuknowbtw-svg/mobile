@@ -15,6 +15,7 @@ import {
 import { COLORS } from '../constants';
 import { useAppStore } from '../store/useAppStore';
 import { sendOtp, verifyOtp } from '../api/auth';
+import { registerForPushNotifications, scheduleDailySummary, scheduleWeeklyReminder, isNotificationEnabled } from '../utils/notifications';
 
 interface OTPLoginScreenProps {
     navigation: any;
@@ -50,7 +51,7 @@ export default function OTPLoginScreen({ navigation }: OTPLoginScreenProps) {
                 setOtpSent(true);
                 setTimer(30);
             } else {
-                Alert.alert('त्रुटि', 'OTP भेजने में विफल। कृपया पुन: प्रयास करें।');
+                Alert.alert(text.errorTitle, text.errorMsg + '.');
             }
         }
     };
@@ -78,17 +79,58 @@ export default function OTPLoginScreen({ navigation }: OTPLoginScreenProps) {
             if (res.user?.phone) storeSetPhone(res.user.phone);
             if (res.token) setToken(res.token);
             setLoggedIn(true);
+
+            // Register for push notifications after successful login
+            if (res.user?.id) {
+                registerForPushNotifications(res.user.id, res.user.phone || phone).catch(err => {
+                    console.error('Failed to register push notifications:', err);
+                });
+            }
+
+            // Schedule daily summary and weekly reminder notifications
+            const dailySummaryEnabled = await isNotificationEnabled('DAILY_SUMMARY');
+            const weeklyReminderEnabled = await isNotificationEnabled('WEEKLY_REMINDER');
+
+            if (dailySummaryEnabled) {
+                scheduleDailySummary(0, 0, language as 'hi' | 'en').catch(err => {
+                    console.error('Failed to schedule daily summary:', err);
+                });
+            }
+
+            if (weeklyReminderEnabled) {
+                scheduleWeeklyReminder(0, 0, language as 'hi' | 'en').catch(err => {
+                    console.error('Failed to schedule weekly reminder:', err);
+                });
+            }
+
             navigation.reset({
                 index: 0,
                 routes: [{ name: 'MainTabs' }],
             });
         } else {
-            Alert.alert('लॉगिन विफल', res.error || 'अमान्य OTP');
+            Alert.alert(text.loginFailed, res.error || text.invalidOtp);
         }
     };
 
     const toggleLanguage = () => {
         setLanguage(language === 'hi' ? 'en' : 'hi');
+    };
+
+    const text = {
+        welcome: language === 'hi' ? 'स्वागत है!' : 'Welcome!',
+        subtitle: language === 'hi' ? 'अपना मोबाइल नंबर डालें' : 'Enter your mobile number',
+        button: language === 'hi' ? 'OTP भेजें' : 'Send OTP',
+        secure: language === 'hi' ? '100% सुरक्षित' : '100% Secure',
+        bankSecurity: language === 'hi' ? 'बैंक जैसी सुरक्षा' : 'Bank-grade Security',
+        enterOtp: language === 'hi' ? 'OTP डालें' : 'Enter OTP',
+        otpSent: language === 'hi' ? 'पर OTP भेजा गया' : 'OTP sent to',
+        verify: language === 'hi' ? 'वेरिफाई करें' : 'Verify',
+        resendIn: language === 'hi' ? 'फिर से भेजें' : 'Resend in',
+        resendOtp: language === 'hi' ? 'OTP फिर से भेजें' : 'Resend OTP',
+        errorTitle: language === 'hi' ? 'त्रुटि' : 'Error',
+        errorMsg: language === 'hi' ? 'OTP भेजने में विफल' : 'Failed to send OTP',
+        loginFailed: language === 'hi' ? 'लॉगिन विफल' : 'Login Failed',
+        invalidOtp: language === 'hi' ? 'अमान्य OTP' : 'Invalid OTP'
     };
 
     return (
@@ -108,7 +150,7 @@ export default function OTPLoginScreen({ navigation }: OTPLoginScreenProps) {
                     ) : <View />}
                     
                     <TouchableOpacity onPress={toggleLanguage} style={styles.langSelector}>
-                        <Text style={styles.langText}>{language === 'hi' ? 'EN' : 'HI'}</Text>
+                        <Text style={styles.langText}>{language === 'hi' ? 'English' : 'हिंदी'}</Text>
                     </TouchableOpacity>
                 </View>
 
@@ -123,8 +165,8 @@ export default function OTPLoginScreen({ navigation }: OTPLoginScreenProps) {
 
                     {!otpSent ? (
                         <View style={styles.formContainer}>
-                            <Text style={styles.welcomeTitle}>स्वागत है!</Text>
-                            <Text style={styles.subtext}>अपना मोबाइल नंबर डालें</Text>
+                            <Text style={styles.welcomeTitle}>{text.welcome}</Text>
+                            <Text style={styles.subtext}>{text.subtitle}</Text>
 
                             {/* Phone Input */}
                             <View style={styles.phoneInputContainer}>
@@ -150,21 +192,21 @@ export default function OTPLoginScreen({ navigation }: OTPLoginScreenProps) {
                                 {isLoading ? (
                                     <ActivityIndicator color={COLORS.white} />
                                 ) : (
-                                    <Text style={styles.buttonText}>OTP भेजें</Text>
+                                    <Text style={styles.buttonText}>{text.button}</Text>
                                 )}
                             </TouchableOpacity>
 
                             {/* Trust Indicators */}
                             <View style={styles.trustContainer}>
-                                <Text style={styles.trustItem}>🔒 100% सुरक्षित</Text>
+                                <Text style={styles.trustItem}>🔒 {text.secure}</Text>
                                 <View style={styles.dot} />
-                                <Text style={styles.trustItem}>🏦 बैंक जैसी सुरक्षा</Text>
+                                <Text style={styles.trustItem}>🏦 {text.bankSecurity}</Text>
                             </View>
                         </View>
                     ) : (
                         <View style={styles.formContainer}>
-                            <Text style={styles.welcomeTitle}>OTP डालें</Text>
-                            <Text style={styles.subtext}>+91 {phone} पर OTP भेजा गया</Text>
+                            <Text style={styles.welcomeTitle}>{text.enterOtp}</Text>
+                            <Text style={styles.subtext}>+91 {phone} {text.otpSent}</Text>
 
                             {/* OTP Inputs */}
                             <View style={styles.otpContainer}>
@@ -193,17 +235,17 @@ export default function OTPLoginScreen({ navigation }: OTPLoginScreenProps) {
                                 {isLoading ? (
                                     <ActivityIndicator color={COLORS.white} />
                                 ) : (
-                                    <Text style={styles.buttonText}>Verify</Text>
+                                    <Text style={styles.buttonText}>{text.verify}</Text>
                                 )}
                             </TouchableOpacity>
 
                             {/* Resend Timer */}
                             <View style={styles.timerContainer}>
                                 {timer > 0 ? (
-                                    <Text style={styles.timerText}>फिर से भेजें ({timer}s)</Text>
+                                    <Text style={styles.timerText}>{text.resendIn} ({timer}s)</Text>
                                 ) : (
                                     <TouchableOpacity onPress={handleSendOtp}>
-                                        <Text style={styles.resendText}>OTP फिर से भेजें</Text>
+                                        <Text style={styles.resendText}>{text.resendOtp}</Text>
                                     </TouchableOpacity>
                                 )}
                             </View>
