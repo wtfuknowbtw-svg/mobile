@@ -164,9 +164,11 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
             <View style={styles.header}>
                 <View>
                     <Text style={styles.greeting}>
-                        {business?.name ? `नमस्ते, ${business.name}!` : 'नमस्ते!'}
+                        {business?.name || 'ApnaKhata'}
                     </Text>
-                    <Text style={styles.dateText}>{getTodayDate()}</Text>
+                    <Text style={styles.dateText}>
+                        {business?.ownerName ? `नमस्ते, ${business.ownerName}` : getTodayDate()}
+                    </Text>
                 </View>
                 <View style={styles.headerActions}>
                     <TouchableOpacity 

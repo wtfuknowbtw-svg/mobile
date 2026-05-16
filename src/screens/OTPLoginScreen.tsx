@@ -15,6 +15,7 @@ import {
 import { COLORS } from '../constants';
 import { useAppStore } from '../store/useAppStore';
 import { sendOtp, verifyOtp } from '../api/auth';
+import { apiGet } from '../lib/apiClient';
 import { registerForPushNotifications, scheduleDailySummary, scheduleWeeklyReminder, isNotificationEnabled } from '../utils/notifications';
 
 interface OTPLoginScreenProps {
@@ -22,7 +23,7 @@ interface OTPLoginScreenProps {
 }
 
 export default function OTPLoginScreen({ navigation }: OTPLoginScreenProps) {
-    const { setLoggedIn, setPhone: storeSetPhone, setBusinessId, setToken, language, setLanguage } = useAppStore();
+    const { setLoggedIn, setPhone: storeSetPhone, setBusinessId, setToken, language, setLanguage, setBusiness } = useAppStore();
     const [phone, setPhone] = useState('');
     const [otpSent, setOtpSent] = useState(false);
     const [otp, setOtp] = useState(['', '', '', '', '', '']);
@@ -63,6 +64,8 @@ export default function OTPLoginScreen({ navigation }: OTPLoginScreenProps) {
 
         if (value && index < 5) {
             otpRefs.current[index + 1]?.focus();
+        } else if (!value && index > 0) {
+            otpRefs.current[index - 1]?.focus();
         }
     };
 
@@ -78,6 +81,19 @@ export default function OTPLoginScreen({ navigation }: OTPLoginScreenProps) {
             if (res.user?.id) setBusinessId(res.user.id);
             if (res.user?.phone) storeSetPhone(res.user.phone);
             if (res.token) setToken(res.token);
+
+            // Fetch business profile and save to store
+            try {
+                const profileRes = await apiGet('/business-profile');
+                if (profileRes.data && profileRes.data.data) {
+                    setBusiness(profileRes.data.data);
+                } else if (profileRes.data) {
+                    setBusiness(profileRes.data);
+                }
+            } catch (err) {
+                console.error('Failed to fetch business profile:', err);
+            }
+
             setLoggedIn(true);
 
             // Register for push notifications after successful login
@@ -92,13 +108,13 @@ export default function OTPLoginScreen({ navigation }: OTPLoginScreenProps) {
             const weeklyReminderEnabled = await isNotificationEnabled('WEEKLY_REMINDER');
 
             if (dailySummaryEnabled) {
-                scheduleDailySummary(0, 0, language as 'hi' | 'en').catch(err => {
+                scheduleDailySummary(language as 'hi' | 'en').catch(err => {
                     console.error('Failed to schedule daily summary:', err);
                 });
             }
 
             if (weeklyReminderEnabled) {
-                scheduleWeeklyReminder(0, 0, language as 'hi' | 'en').catch(err => {
+                scheduleWeeklyReminder(language as 'hi' | 'en').catch(err => {
                     console.error('Failed to schedule weekly reminder:', err);
                 });
             }

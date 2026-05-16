@@ -4,6 +4,7 @@ export interface Business {
     id: string;
     phone: string;
     name?: string;
+    ownerName?: string;
     type?: string;
     language: string;
     gstin?: string;

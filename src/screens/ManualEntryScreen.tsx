@@ -24,6 +24,7 @@ import type { Customer } from '../types';
 import { useSubscription } from '../context/SubscriptionContext';
 import { Ionicons } from '@expo/vector-icons';
 import { getInitialColor } from '../utils/ui';
+import { triggerHighUdharAlert, isNotificationEnabled } from '../utils/notifications';
 
 const { width } = Dimensions.get('window');
 
@@ -85,6 +86,22 @@ export default function ManualEntryScreen({ navigation, route }: ManualEntryScre
             queryClient.invalidateQueries({ queryKey: ['transactions'] });
             queryClient.invalidateQueries({ queryKey: ['customers'] });
             syncSubscriptionStatus();
+
+            // Check high udhar alert
+            if (selectedCustomer && type === 'credit') {
+                const newUdhar = (selectedCustomer.totalUdhar || 0) + Number(amount);
+                if (newUdhar > 1000) {
+                    const enabled = await isNotificationEnabled('HIGH_UDHAR_ALERT');
+                    if (enabled) {
+                        triggerHighUdharAlert(
+                            selectedCustomer.name,
+                            newUdhar,
+                            language as 'hi' | 'en'
+                        );
+                    }
+                }
+            }
+
             navigation.goBack();
         },
         onError: (error) => {

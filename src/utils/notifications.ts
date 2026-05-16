@@ -13,7 +13,7 @@ Notifications.setNotificationHandler({
   }),
 });
 
-export type NotificationType = 'HIGH_UDHAR_ALERT' | 'DAILY_SUMMARY' | 'WEEKLY_REMINDER' | 'TRANSACTION_ADDED' | 'TEST';
+export type NotificationType = 'HIGH_UDHAR_ALERT' | 'DAILY_SUMMARY' | 'WEEKLY_REMINDER' | 'TEST';
 
 export interface NotificationData {
   type: NotificationType;
@@ -179,37 +179,27 @@ function getNotificationContent(type: NotificationType, data: NotificationData):
       if (language === 'hi') {
         return {
           title: '📊 आज का हिसाब',
-          body: `आज ₹${data.given} दिया, ₹${data.received} मिला`,
+          body: 'आज का हिसाब देखें',
         };
       }
       return {
         title: '📊 Daily Summary',
-        body: `Today: ₹${data.given} given, ₹${data.received} received`,
+        body: "Check today's summary",
       };
 
     case 'WEEKLY_REMINDER':
       if (language === 'hi') {
         return {
           title: '📅 साप्ताहिक याद',
-          body: `${data.count} customers का ₹${data.total} बाकी है`,
+          body: 'इस हफ्ते का हिसाब देखें',
         };
       }
       return {
         title: '📅 Weekly Reminder',
-        body: `${data.count} customers owe ₹${data.total}`,
+        body: "Check this week's summary",
       };
 
-    case 'TRANSACTION_ADDED':
-      if (language === 'hi') {
-        return {
-          title: '✅ लेन-देन जोड़ा गया',
-          body: `${data.customerName} के लिए ₹${data.amount} का लेन-देन`,
-        };
-      }
-      return {
-        title: '✅ Transaction Added',
-        body: `Transaction of ₹${data.amount} for ${data.customerName}`,
-      };
+
 
     default:
       return {
@@ -240,37 +230,14 @@ export async function triggerHighUdharAlert(
   });
 }
 
-// Trigger TRANSACTION_ADDED notification (instant, local)
-export async function triggerTransactionAdded(
-  customerName: string,
-  amount: number,
-  language: 'hi' | 'en' = 'hi'
-): Promise<void> {
-  const content = getNotificationContent('TRANSACTION_ADDED', {
-    type: 'TRANSACTION_ADDED',
-    customerName,
-    amount,
-    language,
-  });
 
-  await scheduleLocalNotification(content.title, content.body, {
-    type: 'TRANSACTION_ADDED',
-    customerName,
-    amount,
-    language,
-  });
-}
 
 // Schedule DAILY_SUMMARY notification (8pm every day)
 export async function scheduleDailySummary(
-  given: number,
-  received: number,
   language: 'hi' | 'en' = 'hi'
 ): Promise<string> {
   const content = getNotificationContent('DAILY_SUMMARY', {
     type: 'DAILY_SUMMARY',
-    given,
-    received,
     language,
   });
 
@@ -284,22 +251,16 @@ export async function scheduleDailySummary(
 
   return await scheduleLocalNotification(content.title, content.body, {
     type: 'DAILY_SUMMARY',
-    given,
-    received,
     language,
   }, trigger);
 }
 
 // Schedule WEEKLY_REMINDER notification (Monday 10am)
 export async function scheduleWeeklyReminder(
-  count: number,
-  total: number,
   language: 'hi' | 'en' = 'hi'
 ): Promise<string> {
   const content = getNotificationContent('WEEKLY_REMINDER', {
     type: 'WEEKLY_REMINDER',
-    count,
-    total,
     language,
   });
 
@@ -314,8 +275,6 @@ export async function scheduleWeeklyReminder(
 
   return await scheduleLocalNotification(content.title, content.body, {
     type: 'WEEKLY_REMINDER',
-    count,
-    total,
     language,
   }, trigger);
 }
@@ -333,7 +292,6 @@ export async function getNotificationPreferences(): Promise<Record<NotificationT
       HIGH_UDHAR_ALERT: true,
       DAILY_SUMMARY: true,
       WEEKLY_REMINDER: true,
-      TRANSACTION_ADDED: true,
       TEST: true,
     };
 
@@ -345,7 +303,6 @@ export async function getNotificationPreferences(): Promise<Record<NotificationT
       HIGH_UDHAR_ALERT: true,
       DAILY_SUMMARY: true,
       WEEKLY_REMINDER: true,
-      TRANSACTION_ADDED: true,
       TEST: true,
     };
   }

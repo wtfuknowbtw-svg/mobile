@@ -1,8 +1,9 @@
 {
   "expo": {
-    "name": "mobile",
-    "slug": "mobile",
+    "name": "ApnaKhata",
+    "slug": "apnakhata",
     "version": "1.0.0",
+    "newArchEnabled": true,
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -22,7 +23,8 @@
       ],
       "expo-camera",
       "expo-contacts",
-      "expo-image-picker"
+      "expo-image-picker",
+      "expo-notifications"
     ],
     "ios": {
       "supportsTablet": true,

@@ -4,6 +4,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { View, Text, Platform } from 'react-native';
 import { COLORS } from '../constants';
+import { Ionicons } from '@expo/vector-icons';
 import type { RootStackParamList, MainTabParamList } from '../types';
 import i18n from '../i18n';
 
@@ -49,16 +50,32 @@ function getTabLabel(routeName: string) {
 
 /** Tab icon component */
 function TabIcon({ name, focused }: { name: string; focused: boolean }) {
-    const icons: Record<string, string> = {
-        Home: '🏠',
-        Customers: '👥',
-        Reports: '📊',
-        Settings: '⚙️',
-    };
+    let iconName: any;
+
+    switch (name) {
+        case 'Home':
+            iconName = focused ? 'home' : 'home-outline';
+            break;
+        case 'Customers':
+            iconName = focused ? 'people' : 'people-outline';
+            break;
+        case 'Reports':
+            iconName = focused ? 'bar-chart' : 'bar-chart-outline';
+            break;
+        case 'Settings':
+            iconName = focused ? 'settings' : 'settings-outline';
+            break;
+        default:
+            iconName = focused ? 'square' : 'square-outline';
+    }
 
     return (
         <View style={{ alignItems: 'center' }}>
-            <Text style={{ fontSize: 22 }}>{icons[name] || '📱'}</Text>
+            <Ionicons 
+                name={iconName} 
+                size={22} 
+                color={focused ? COLORS.success : COLORS.textMuted} 
+            />
             {focused && (
                 <View
                     style={{

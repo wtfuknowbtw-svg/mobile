@@ -65,7 +65,7 @@ export const useAppStore = create<AppState>()(
             setLoggedIn: (loggedIn) => set({ isLoggedIn: loggedIn }),
             setBusiness: (business) => set({ business }),
             setDashboardStats: (stats) => set({ dashboardStats: stats }),
-            logout: () => set({ isLoggedIn: false, token: null, businessId: '', phone: '' }),
+            logout: () => set({ isLoggedIn: false, token: null, businessId: '', phone: '', business: null }),
 
             computeStats: (transactions: Transaction[]) => {
                 const now = new Date();
