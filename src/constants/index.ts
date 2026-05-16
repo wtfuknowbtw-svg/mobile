@@ -21,6 +21,8 @@ export const COLORS = {
     black: '#000000',
     orange: '#F5A623',
     orangeLight: '#FFF8E1',
+    gold: '#F5A623',
+    goldLight: '#FFF8E1',
 } as const;
 
 export const FONTS = {

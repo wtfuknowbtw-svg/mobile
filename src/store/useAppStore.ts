@@ -98,13 +98,25 @@ export const useAppStore = create<AppState>()(
                     }
                 });
 
-                set({
-                    dashboardStats: {
-                        todaySales: Math.round(todaySales),
-                        totalUdhar: Math.round(totalUdhar),
-                        thisWeek: Math.round(thisWeek),
-                    },
-                });
+                const currentStats = get().dashboardStats;
+                const newTodaySales = Math.round(todaySales);
+                const newTotalUdhar = Math.round(totalUdhar);
+                const newThisWeek = Math.round(thisWeek);
+
+                // Only update if values actually changed to prevent infinite loops
+                if (
+                    currentStats.todaySales !== newTodaySales ||
+                    currentStats.totalUdhar !== newTotalUdhar ||
+                    currentStats.thisWeek !== newThisWeek
+                ) {
+                    set({
+                        dashboardStats: {
+                            todaySales: newTodaySales,
+                            totalUdhar: newTotalUdhar,
+                            thisWeek: newThisWeek,
+                        },
+                    });
+                }
             },
         }),
         {

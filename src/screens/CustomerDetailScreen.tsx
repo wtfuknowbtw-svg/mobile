@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
     View,
     Text,
@@ -16,7 +16,8 @@ import {
 } from 'react-native';
 import { COLORS } from '../constants';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getCustomerTransactions } from '../api/customers';
+import { getCustomerTransactions, updateCustomer } from '../api/customers';
+import { Ionicons } from '@expo/vector-icons';
 import { createTransaction } from '../api/transactions';
 import { useAppStore } from '../store/useAppStore';
 import type { Transaction } from '../types';
@@ -42,6 +43,9 @@ export default function CustomerDetailScreen({ navigation, route }: CustomerDeta
     const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [paymentAmount, setPaymentAmount] = useState('');
     const [filter, setFilter] = useState<FilterType>('all');
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [editName, setEditName] = useState(customerName || '');
+    const [editPhone, setEditPhone] = useState(customerPhone || '');
 
     const { data, isLoading, refetch, isRefetching } = useQuery({
         queryKey: ['customerTransactions', customerId],
@@ -78,13 +82,13 @@ export default function CustomerDetailScreen({ navigation, route }: CustomerDeta
         outstanding: language === 'hi' ? 'कुल बकाया' : 'Outstanding',
         history: language === 'hi' ? 'लेन-देन का इतिहास' : 'TRANSACTION HISTORY',
         noTxns: language === 'hi' ? 'अभी कोई लेन-देन नहीं है' : 'No transactions yet',
-        collectBtn: language === 'hi' ? '💰 पेमेंट प्राप्त करें' : '💰 Collect Payment',
+        collectBtn: language === 'hi' ? 'पेमेंट प्राप्त करें' : 'Collect Payment',
         collectTitle: language === 'hi' ? 'पेमेंट जमा करें' : 'Collect Payment',
         from: language === 'hi' ? 'से' : 'From',
         amount: language === 'hi' ? 'पेमेंट राशि' : 'PAYMENT AMOUNT',
         partialHint: language === 'hi' ? 'आप कम राशि भी डाल सकते हैं' : 'You can collect a partial payment too',
         cancel: language === 'hi' ? 'रद्द करें' : 'Cancel',
-        confirm: language === 'hi' ? '✅ पेमेंट पक्का करें' : '✅ Confirm Payment',
+        confirm: language === 'hi' ? 'पेमेंट पक्का करें' : 'Confirm Payment',
         filterAll: language === 'hi' ? 'सब' : 'All',
         filterUdhar: language === 'hi' ? 'बकाया' : 'Udhar',
         filterPaid: language === 'hi' ? 'जमा' : 'Paid',
@@ -128,6 +132,36 @@ export default function CustomerDetailScreen({ navigation, route }: CustomerDeta
         },
     });
 
+    const editMutation = useMutation({
+        mutationFn: updateCustomer,
+        onSuccess: (result) => {
+            queryClient.invalidateQueries({ queryKey: ['customerTransactions', customerId] });
+            queryClient.invalidateQueries({ queryKey: ['customers'] });
+            setShowEditModal(false);
+            Alert.alert(
+                language === 'hi' ? '✅ अपडेट हो गया' : '✅ Updated',
+                language === 'hi' ? 'ग्राहक की जानकारी अपडेट हो गई।' : 'Customer details updated successfully.'
+            );
+            // Update route params so header reflects changes
+            navigation.setParams({
+                customerName: editName.trim(),
+                customerPhone: editPhone.trim() || undefined,
+            });
+        },
+        onError: () => {
+            Alert.alert('Error', language === 'hi' ? 'अपडेट नहीं हो सका।' : 'Failed to update customer.');
+        },
+    });
+
+    const handleSaveEdit = () => {
+        if (!editName.trim()) return;
+        editMutation.mutate({
+            id: customerId,
+            name: editName.trim(),
+            phone: editPhone.trim() || null,
+        });
+    };
+
     const handleCall = () => {
         if (customerPhone) {
             Linking.openURL(`tel:${customerPhone}`);
@@ -161,7 +195,7 @@ export default function CustomerDetailScreen({ navigation, route }: CustomerDeta
             {/* Header */}
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                    <Text style={styles.backIcon}>←</Text>
+                    <Ionicons name="arrow-back" size={24} color={COLORS.text} />
                 </TouchableOpacity>
                 <View style={[styles.avatar, { backgroundColor: getInitialColor(customerName || 'C') }]}>
                     <Text style={styles.avatarText}>{(customerName || 'C').charAt(0)}</Text>
@@ -172,16 +206,22 @@ export default function CustomerDetailScreen({ navigation, route }: CustomerDeta
                 </View>
 
                 <View style={styles.headerActions}>
+                    <TouchableOpacity
+                        onPress={() => { setEditName(customerName || ''); setEditPhone(customerPhone || ''); setShowEditModal(true); }}
+                        style={[styles.actionBtn, { backgroundColor: COLORS.primaryLight }]}
+                    >
+                        <Ionicons name="create-outline" size={18} color={COLORS.primary} />
+                    </TouchableOpacity>
                     {customerPhone && (
                         <>
                             <TouchableOpacity onPress={handleCall} style={[styles.actionBtn, { backgroundColor: COLORS.primaryLight }]}>
-                                <Text style={styles.actionIcon}>📞</Text>
+                                <Ionicons name="call-outline" size={18} color={COLORS.primary} />
                             </TouchableOpacity>
                             <TouchableOpacity 
                                 onPress={() => openWhatsAppReminder(customerPhone, customerName || 'Customer', businessName, totalUdhar, language as any)} 
                                 style={[styles.actionBtn, { backgroundColor: '#25D36620' }]}
                             >
-                                <Text style={styles.actionIcon}>📲</Text>
+                                <Ionicons name="logo-whatsapp" size={18} color="#25D366" />
                             </TouchableOpacity>
                         </>
                     )}
@@ -234,11 +274,9 @@ export default function CustomerDetailScreen({ navigation, route }: CustomerDeta
                                     <Text style={styles.txnItemTitle}>{txn.itemName || 'Items'}</Text>
                                     <Text style={styles.txnItemDate}>{formatDate(txn.date)}</Text>
                                 </View>
-                                <View style={{ alignItems: 'flex-end' }}>
-                                    <Text style={styles.txnItemPrice}>{formatCurrency(txn.price)}</Text>
-                                    <View style={[styles.typeBadge, { backgroundColor: typeInfo.bg }]}>
-                                        <Text style={[styles.typeBadgeText, { color: typeInfo.color }]}>{typeInfo.label}</Text>
-                                    </View>
+                                <View style={{ alignItems: 'flex-end', flexDirection: 'row', gap: 6 }}>
+                                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: typeInfo.color, marginTop: 5 }} />
+                                    <Text style={[styles.txnItemPrice, { color: typeInfo.color }]}>{formatCurrency(txn.price)}</Text>
                                 </View>
                             </View>
                         );
@@ -299,6 +337,76 @@ export default function CustomerDetailScreen({ navigation, route }: CustomerDeta
                     </View>
                 </View>
             </Modal>
+
+            {/* Edit Customer Modal */}
+            <Modal visible={showEditModal} transparent animationType="slide">
+                <View style={styles.modalOverlay}>
+                    <TouchableOpacity activeOpacity={1} onPress={() => setShowEditModal(false)} style={{ flex: 1 }} />
+                    <View style={styles.modalContent}>
+                        <View style={styles.modalHandle} />
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+                            <Text style={styles.modalTitle}>
+                                {language === 'hi' ? 'ग्राहक संपादित करें' : 'Edit Customer'}
+                            </Text>
+                            <TouchableOpacity onPress={() => setShowEditModal(false)}>
+                                <Ionicons name="close-circle" size={28} color={COLORS.textMuted} />
+                            </TouchableOpacity>
+                        </View>
+
+                        <Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.textMuted, marginBottom: 8, letterSpacing: 0.5 }}>
+                            {language === 'hi' ? 'नाम *' : 'NAME *'}
+                        </Text>
+                        <TextInput
+                            value={editName}
+                            onChangeText={setEditName}
+                            placeholder={language === 'hi' ? 'ग्राहक का नाम' : 'Customer name'}
+                            placeholderTextColor={COLORS.textMuted}
+                            autoFocus
+                            style={styles.editInput}
+                        />
+
+                        <Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.textMuted, marginBottom: 8, letterSpacing: 0.5 }}>
+                            {language === 'hi' ? 'फोन नंबर' : 'PHONE NUMBER'}
+                        </Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.card, borderRadius: 14, borderWidth: 1.5, borderColor: COLORS.border, marginBottom: 28 }}>
+                            <View style={{ paddingHorizontal: 14, paddingVertical: 14, borderRightWidth: 1, borderRightColor: COLORS.border }}>
+                                <Text style={{ fontSize: 16, color: COLORS.textMuted, fontWeight: '600' }}>+91</Text>
+                            </View>
+                            <TextInput
+                                value={editPhone}
+                                onChangeText={setEditPhone}
+                                placeholder={language === 'hi' ? '10 अंकों का नंबर' : '10-digit number'}
+                                placeholderTextColor={COLORS.textMuted}
+                                keyboardType="phone-pad"
+                                maxLength={10}
+                                style={{ flex: 1, paddingHorizontal: 14, paddingVertical: 14, fontSize: 16, color: COLORS.text }}
+                            />
+                        </View>
+
+                        <TouchableOpacity
+                            onPress={handleSaveEdit}
+                            disabled={!editName.trim() || editMutation.isPending}
+                            activeOpacity={0.8}
+                            style={{
+                                paddingVertical: 16, borderRadius: 14, alignItems: 'center',
+                                backgroundColor: editName.trim() ? COLORS.primary : COLORS.border,
+                                shadowColor: COLORS.primary,
+                                shadowOffset: { width: 0, height: 4 },
+                                shadowOpacity: editName.trim() ? 0.3 : 0,
+                                shadowRadius: 8, elevation: editName.trim() ? 4 : 0,
+                            }}
+                        >
+                            {editMutation.isPending ? (
+                                <ActivityIndicator color={COLORS.white} />
+                            ) : (
+                                <Text style={{ fontSize: 16, fontWeight: '800', color: COLORS.white }}>
+                                    {language === 'hi' ? 'सहेजें' : 'Save Changes'}
+                                </Text>
+                            )}
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 }
@@ -309,6 +417,7 @@ const styles = StyleSheet.create({
     backButton: { marginRight: 16, padding: 4 },
     backIcon: { fontSize: 24, color: COLORS.text },
     avatar: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+    editInput: { backgroundColor: COLORS.card, borderRadius: 14, borderWidth: 1.5, borderColor: COLORS.border, paddingHorizontal: 16, paddingVertical: 14, fontSize: 16, color: COLORS.text, marginBottom: 20 },
     avatarText: { color: COLORS.white, fontSize: 20, fontWeight: '700' },
     customerNameText: { fontSize: 20, fontWeight: '700', color: COLORS.text },
     txnStatsText: { fontSize: 13, color: COLORS.textMuted },

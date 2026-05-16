@@ -1,4 +1,4 @@
-import { apiGet, apiPost } from '../lib/apiClient';
+import { apiGet, apiPost, apiPut } from '../lib/apiClient';
 import type { Customer, Transaction } from '../types';
 
 export const getCustomers = async (businessId?: string): Promise<{ data?: Customer[]; error?: string }> => {
@@ -47,6 +47,22 @@ export const updateCustomerUdhar = async (
     // This is now handled automatically by the backend
     // Keeping for backward compatibility but it's a no-op
     return {};
+};
+
+export const updateCustomer = async (
+    customer: { id: string; name?: string; phone?: string | null }
+): Promise<{ data?: Customer; error?: string }> => {
+    const response = await apiPut<{ data: Customer; message?: string }>('/customers', {
+        id: customer.id,
+        name: customer.name,
+        phone: customer.phone,
+    });
+
+    if (response.error) {
+        return { error: response.error };
+    }
+
+    return { data: response.data?.data };
 };
 
 export const getCustomerTransactions = async (

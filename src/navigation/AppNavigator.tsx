@@ -26,6 +26,7 @@ import UdharPaymentScreen from '../screens/UdharPaymentScreen';
 import BusinessProfileScreen from '../screens/BusinessProfileScreen';
 import SubscriptionScreen from '../screens/SubscriptionScreen';
 import UpgradeScreen from '../screens/UpgradeScreen';
+import NotificationSettingsScreen from '../screens/NotificationSettingsScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const MainTab = createBottomTabNavigator<MainTabParamList>();
@@ -173,6 +174,7 @@ export default function AppNavigator() {
                     component={UpgradeScreen}
                     options={{ animation: 'slide_from_bottom' }}
                 />
+                <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} />
             </Stack.Navigator>
         </NavigationContainer>
     );

@@ -86,6 +86,7 @@ export type RootStackParamList = {
     BusinessProfile: undefined;
     Subscription: undefined;
     Upgrade: undefined;
+    NotificationSettings: undefined;
 };
 
 export type MainTabParamList = {

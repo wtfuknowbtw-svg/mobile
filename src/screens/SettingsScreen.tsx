@@ -85,11 +85,10 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
         },
         {
             icon: 'notifications-outline',
-            iconColor: COLORS.textMuted,
-            label: 'Notifications',
-            subtitle: 'Coming soon',
-            action: () => {},
-            disabled: true,
+            iconColor: COLORS.primary,
+            label: i18n.t('settings.notifications') || 'Notifications',
+            subtitle: i18n.t('settings.notificationsDesc') || 'Manage alerts and reminders',
+            action: () => navigation.navigate('NotificationSettings'),
         },
     ];
 
