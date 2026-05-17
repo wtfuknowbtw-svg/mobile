@@ -16,13 +16,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getBusinessProfile, updateBusinessProfile } from '../api/business';
 import { useAppStore } from '../store/useAppStore';
 
-const BUSINESS_TYPES = [
-    { value: 'kirana', label: '🏪 Kirana Store' },
-    { value: 'clinic', label: '🏥 Clinic' },
-    { value: 'workshop', label: '🔧 Workshop' },
-    { value: 'dhaba', label: '🍽️ Dhaba / Restaurant' },
-    { value: 'other', label: '📦 Other' },
-];
+
 
 interface BusinessProfileScreenProps {
     navigation: any;
@@ -33,7 +27,6 @@ export default function BusinessProfileScreen({ navigation }: BusinessProfileScr
     const queryClient = useQueryClient();
 
     const [shopName, setShopName] = useState('');
-    const [businessType, setBusinessType] = useState('');
     const [gstin, setGstin] = useState('');
     const [ownerName, setOwnerName] = useState('');
 
@@ -46,7 +39,6 @@ export default function BusinessProfileScreen({ navigation }: BusinessProfileScr
         if (data?.data) {
             setShopName(data.data.name || '');
             setOwnerName(data.data.ownerName || '');
-            setBusinessType(data.data.type || '');
             setGstin(data.data.gstin || '');
             
             // Sync store phone if it matches or fills gap
@@ -81,7 +73,6 @@ export default function BusinessProfileScreen({ navigation }: BusinessProfileScr
         mutation.mutate({
             name: shopName.trim(),
             ownerName: ownerName.trim() || undefined,
-            type: businessType || undefined,
             gstin: gstin.trim() || undefined,
         });
     };
@@ -300,36 +291,7 @@ export default function BusinessProfileScreen({ navigation }: BusinessProfileScr
                     }}
                 />
 
-                {/* Business Type */}
-                <Text style={{ fontSize: 13, fontWeight: '600', color: COLORS.textMuted, marginBottom: 8, letterSpacing: 0.5 }}>
-                    BUSINESS TYPE
-                </Text>
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
-                    {BUSINESS_TYPES.map((bt) => (
-                        <TouchableOpacity
-                            key={bt.value}
-                            onPress={() => setBusinessType(bt.value)}
-                            style={{
-                                backgroundColor: businessType === bt.value ? COLORS.secondaryLight : COLORS.card,
-                                borderRadius: 12,
-                                borderWidth: 1.5,
-                                borderColor: businessType === bt.value ? COLORS.secondary : COLORS.border,
-                                paddingHorizontal: 14,
-                                paddingVertical: 10,
-                            }}
-                        >
-                            <Text
-                                style={{
-                                    fontSize: 14,
-                                    fontWeight: businessType === bt.value ? '700' : '500',
-                                    color: businessType === bt.value ? COLORS.secondary : COLORS.text,
-                                }}
-                            >
-                                {bt.label}
-                            </Text>
-                        </TouchableOpacity>
-                    ))}
-                </View>
+
 
                 {/* GSTIN */}
                 <Text style={{ fontSize: 13, fontWeight: '600', color: COLORS.textMuted, marginBottom: 8, letterSpacing: 0.5 }}>
@@ -383,7 +345,7 @@ export default function BusinessProfileScreen({ navigation }: BusinessProfileScr
                         <ActivityIndicator color={COLORS.secondary} />
                     ) : (
                         <Text style={{ fontSize: 16, fontWeight: '700', color: COLORS.secondary }}>
-                            💾 Save Profile
+                            Save Profile
                         </Text>
                     )}
                 </TouchableOpacity>

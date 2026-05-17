@@ -52,6 +52,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
     const [showAddSheet, setShowAddSheet] = useState(false);
     const [selectedTxn, setSelectedTxn] = useState<Transaction | null>(null);
     const [showTxnDetails, setShowTxnDetails] = useState(false);
+    const [showSoftBanner, setShowSoftBanner] = useState(true);
     
     const slideAnim = useRef(new Animated.Value(height)).current;
     const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -200,6 +201,25 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
                     </View>
                 )}
 
+                {/* Soft Upgrade Banner */}
+                {plan === 'free' && usage.transactions.current < 50 && showSoftBanner && (
+                    <View style={{ paddingHorizontal: 20, marginBottom: 16 }}>
+                        <View style={{ backgroundColor: '#EBF1FA', borderRadius: 12, padding: 12, flexDirection: 'row', alignItems: 'center' }}>
+                            <View style={{ flex: 1, paddingRight: 8 }}>
+                                <Text style={{ fontSize: 13, color: '#1A3C6E', fontWeight: '600', lineHeight: 18 }}>
+                                    ✨ Upgrade to Pro — Unlimited transactions & AI features
+                                </Text>
+                            </View>
+                            <TouchableOpacity onPress={() => navigation.navigate('Subscription')} style={{ marginRight: 12 }}>
+                                <Text style={{ color: '#F5A623', fontWeight: '800', fontSize: 13 }}>Upgrade →</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity onPress={() => setShowSoftBanner(false)} hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}>
+                                <Ionicons name="close" size={18} color="#1A3C6E" />
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                )}
+
                 {/* Summary Card */}
                 <View style={styles.summaryContainer}>
                     <View style={styles.summaryCard}>
@@ -210,7 +230,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
                                     {formatCurrency(dashboardStats.totalUdhar)}
                                 </Text>
                             </View>
-                            <TouchableOpacity style={styles.detailsBtn}>
+                            <TouchableOpacity style={styles.detailsBtn} onPress={() => navigation.navigate('Reports')}>
                                 <Ionicons name="chevron-forward-circle" size={28} color="rgba(255,255,255,0.4)" />
                             </TouchableOpacity>
                         </View>

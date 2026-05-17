@@ -13,10 +13,10 @@ import { COLORS } from '../constants';
 import { useSubscription } from '../hooks/useSubscription';
 
 const THEME = {
-    primary: COLORS.primary,
-    primaryLight: COLORS.primaryLight,
-    secondary: COLORS.secondary,
-    secondaryLight: COLORS.secondaryLight,
+    primary: '#1A3C6E',
+    primaryLight: '#EBF1FA',
+    secondary: '#1A3C6E',
+    secondaryLight: '#EBF1FA',
     bg: COLORS.background,
     cardBg: COLORS.card,
     textPrimary: COLORS.text,
@@ -230,7 +230,7 @@ export default function SubscriptionScreen({ navigation }: SubscriptionScreenPro
                         padding: 16,
                         marginBottom: 12,
                         borderWidth: 1,
-                        borderColor: currentPlan === 'free' ? THEME.primary : THEME.border,
+                        borderColor: currentPlan === 'free' ? '#1A3C6E' : THEME.border,
                         shadowColor: '#000',
                         shadowOffset: { width: 0, height: 1 },
                         shadowOpacity: 0.04,
@@ -277,8 +277,8 @@ export default function SubscriptionScreen({ navigation }: SubscriptionScreenPro
                                 marginBottom: 12,
                                 borderRadius: 14,
                                 backgroundColor: THEME.cardBg,
-                                borderWidth: isRecommended ? 1.5 : 1,
-                                borderColor: isRecommended ? THEME.primary : THEME.border,
+                                borderWidth: isRecommended ? 2 : 1,
+                                borderColor: isRecommended ? '#1A3C6E' : THEME.border,
                                 overflow: 'hidden',
                                 shadowColor: '#000',
                                 shadowOffset: { width: 0, height: 2 },
@@ -311,9 +311,7 @@ export default function SubscriptionScreen({ navigation }: SubscriptionScreenPro
                                             {isRecommended && (
                                                 <View
                                                     style={{
-                                                        backgroundColor: THEME.secondaryLight,
-                                                        borderWidth: 1,
-                                                        borderColor: THEME.secondary,
+                                                        backgroundColor: '#F5A623',
                                                         paddingHorizontal: 8,
                                                         paddingVertical: 2,
                                                         borderRadius: 10,
@@ -324,7 +322,7 @@ export default function SubscriptionScreen({ navigation }: SubscriptionScreenPro
                                                         style={{
                                                             fontSize: 10,
                                                             fontWeight: '700',
-                                                            color: THEME.secondary,
+                                                            color: '#FFFFFF',
                                                         }}
                                                     >
                                                         Recommended
@@ -412,7 +410,7 @@ export default function SubscriptionScreen({ navigation }: SubscriptionScreenPro
                                             <Text
                                                 style={{
                                                     fontSize: 14,
-                                                    color: THEME.primary,
+                                                    color: '#1A3C6E',
                                                     fontWeight: '600',
                                                     marginRight: 10,
                                                     width: 18,
@@ -440,7 +438,7 @@ export default function SubscriptionScreen({ navigation }: SubscriptionScreenPro
                                     disabled={isCurrentPlan}
                                     activeOpacity={0.85}
                                     style={{
-                                        backgroundColor: isCurrentPlan ? THEME.borderLight : THEME.primary,
+                                        backgroundColor: isCurrentPlan ? THEME.borderLight : (isRecommended ? '#F5A623' : '#1A3C6E'),
                                         borderRadius: 10,
                                         paddingVertical: 13,
                                         alignItems: 'center',
