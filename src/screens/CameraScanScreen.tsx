@@ -203,7 +203,7 @@ export default function CameraScanScreen({ navigation }: CameraScanScreenProps) 
                     },
                     {
                         text: getUpgradeCTA('ai'),
-                        onPress: () => navigation.navigate('Upgrade'),
+                        onPress: () => navigation.navigate('Subscription'),
                     },
                 ]
             );

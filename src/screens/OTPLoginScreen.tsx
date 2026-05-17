@@ -11,6 +11,7 @@ import {
     ActivityIndicator,
     Alert,
     SafeAreaView,
+    ScrollView,
 } from 'react-native';
 import { COLORS } from '../constants';
 import { useAppStore } from '../store/useAppStore';
@@ -155,7 +156,7 @@ export default function OTPLoginScreen({ navigation }: OTPLoginScreenProps) {
             
             <KeyboardAvoidingView
                 style={{ flex: 1 }}
-                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             >
                 {/* Header */}
                 <View style={styles.header}>
@@ -170,7 +171,12 @@ export default function OTPLoginScreen({ navigation }: OTPLoginScreenProps) {
                     </TouchableOpacity>
                 </View>
 
-                <View style={styles.content}>
+                <ScrollView 
+                    contentContainerStyle={styles.scrollContent}
+                    keyboardShouldPersistTaps="handled"
+                    showsVerticalScrollIndicator={false}
+                >
+                    <View style={styles.content}>
                     {/* Logo */}
                     <View style={styles.logoContainer}>
                         <View style={styles.logoCircle}>
@@ -267,7 +273,8 @@ export default function OTPLoginScreen({ navigation }: OTPLoginScreenProps) {
                             </View>
                         </View>
                     )}
-                </View>
+                    </View>
+                </ScrollView>
             </KeyboardAvoidingView>
         </SafeAreaView>
     );
@@ -306,6 +313,10 @@ const styles = StyleSheet.create({
         color: COLORS.primary,
         fontWeight: '700',
         fontSize: 14,
+    },
+    scrollContent: {
+        flexGrow: 1,
+        paddingBottom: 24,
     },
     content: {
         flex: 1,

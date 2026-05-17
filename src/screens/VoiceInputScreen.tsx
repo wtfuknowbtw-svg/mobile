@@ -116,7 +116,7 @@ export default function VoiceInputScreen({ navigation }: VoiceInputScreenProps) 
                     },
                     {
                         text: getUpgradeCTA('ai'),
-                        onPress: () => navigation.navigate('Upgrade'),
+                        onPress: () => navigation.navigate('Subscription'),
                     },
                 ]
             );

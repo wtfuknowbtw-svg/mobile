@@ -117,7 +117,7 @@ export default function CustomersScreen({ navigation }: CustomersScreenProps) {
                 getUpgradeMessage('customers'),
                 [
                     { text: 'Cancel', style: 'cancel' },
-                    { text: getUpgradeCTA('customers'), onPress: () => navigation.navigate('Upgrade') },
+                    { text: getUpgradeCTA('customers'), onPress: () => navigation.navigate('Subscription') },
                 ]
             );
             return;

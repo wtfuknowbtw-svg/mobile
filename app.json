@@ -43,7 +43,7 @@
       "permissions": [
         "android.permission.RECORD_AUDIO"
       ],
-      "package": "com.holabhos.mobile"
+      "package": "com.apnakhata.app"
     },
     "web": {
       "favicon": "./assets/favicon.png"

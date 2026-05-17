@@ -12,17 +12,19 @@ import {
 import { COLORS } from '../constants';
 import { useSubscription } from '../hooks/useSubscription';
 
-// ─── Design tokens ──────────────────────────────────────
-const GREEN = '#057A55';
-const GREEN_LIGHT = '#ECFDF5';
-const GREEN_BORDER = '#A7F3D0';
-const BG = '#F7F8FA';
-const CARD_BG = '#FFFFFF';
-const TEXT_PRIMARY = '#111928';
-const TEXT_SECONDARY = '#6B7280';
-const TEXT_MUTED = '#9CA3AF';
-const BORDER = '#E5E7EB';
-const BORDER_LIGHT = '#F3F4F6';
+const THEME = {
+    primary: COLORS.primary,
+    primaryLight: COLORS.primaryLight,
+    secondary: COLORS.secondary,
+    secondaryLight: COLORS.secondaryLight,
+    bg: COLORS.background,
+    cardBg: COLORS.card,
+    textPrimary: COLORS.text,
+    textSecondary: COLORS.textMuted,
+    textMuted: COLORS.textMuted,
+    border: COLORS.border,
+    borderLight: '#F3F4F6',
+};
 
 // ─── Plan Configurations ────────────────────────────────
 const PLANS = {
@@ -80,15 +82,15 @@ export default function SubscriptionScreen({ navigation }: SubscriptionScreenPro
 
     if (isLoading) {
         return (
-            <View style={{ flex: 1, backgroundColor: BG, justifyContent: 'center', alignItems: 'center' }}>
-                <ActivityIndicator size="large" color={GREEN} />
+            <View style={{ flex: 1, backgroundColor: THEME.bg, justifyContent: 'center', alignItems: 'center' }}>
+                <ActivityIndicator size="large" color={THEME.primary} />
             </View>
         );
     }
 
     return (
-        <View style={{ flex: 1, backgroundColor: BG }}>
-            <StatusBar barStyle="dark-content" backgroundColor={BG} />
+        <View style={{ flex: 1, backgroundColor: THEME.bg }}>
+            <StatusBar barStyle="dark-content" backgroundColor={THEME.bg} />
 
             {/* ─── Header ─────────────────────────────────────── */}
             <View
@@ -98,9 +100,9 @@ export default function SubscriptionScreen({ navigation }: SubscriptionScreenPro
                     paddingTop: Platform.OS === 'ios' ? 56 : 42,
                     paddingHorizontal: 20,
                     paddingBottom: 16,
-                    backgroundColor: CARD_BG,
+                    backgroundColor: THEME.cardBg,
                     borderBottomWidth: 1,
-                    borderBottomColor: BORDER_LIGHT,
+                    borderBottomColor: THEME.borderLight,
                 }}
             >
                 <TouchableOpacity
@@ -110,15 +112,15 @@ export default function SubscriptionScreen({ navigation }: SubscriptionScreenPro
                         width: 36,
                         height: 36,
                         borderRadius: 18,
-                        backgroundColor: BORDER_LIGHT,
+                        backgroundColor: THEME.borderLight,
                         justifyContent: 'center',
                         alignItems: 'center',
                         marginRight: 14,
                     }}
                 >
-                    <Text style={{ fontSize: 18, color: TEXT_PRIMARY, marginTop: -1 }}>{'‹'}</Text>
+                    <Text style={{ fontSize: 18, color: THEME.textPrimary, marginTop: -1 }}>{'‹'}</Text>
                 </TouchableOpacity>
-                <Text style={{ fontSize: 18, fontWeight: '700', color: TEXT_PRIMARY }}>
+                <Text style={{ fontSize: 18, fontWeight: '700', color: THEME.textPrimary }}>
                     Plans & Pricing
                 </Text>
             </View>
@@ -145,7 +147,7 @@ export default function SubscriptionScreen({ navigation }: SubscriptionScreenPro
                                 paddingHorizontal: 20,
                                 paddingVertical: 8,
                                 borderRadius: 17,
-                                backgroundColor: billingInterval === 'month' ? CARD_BG : 'transparent',
+                                backgroundColor: billingInterval === 'month' ? THEME.cardBg : 'transparent',
                                 ...(billingInterval === 'month'
                                     ? {
                                           shadowColor: '#000',
@@ -161,7 +163,7 @@ export default function SubscriptionScreen({ navigation }: SubscriptionScreenPro
                                 style={{
                                     fontSize: 13,
                                     fontWeight: '600',
-                                    color: billingInterval === 'month' ? TEXT_PRIMARY : TEXT_MUTED,
+                                    color: billingInterval === 'month' ? THEME.textPrimary : THEME.textMuted,
                                 }}
                             >
                                 Monthly
@@ -174,7 +176,7 @@ export default function SubscriptionScreen({ navigation }: SubscriptionScreenPro
                                 paddingHorizontal: 20,
                                 paddingVertical: 8,
                                 borderRadius: 17,
-                                backgroundColor: billingInterval === 'year' ? CARD_BG : 'transparent',
+                                backgroundColor: billingInterval === 'year' ? THEME.cardBg : 'transparent',
                                 flexDirection: 'row',
                                 alignItems: 'center',
                                 ...(billingInterval === 'year'
@@ -192,7 +194,7 @@ export default function SubscriptionScreen({ navigation }: SubscriptionScreenPro
                                 style={{
                                     fontSize: 13,
                                     fontWeight: '600',
-                                    color: billingInterval === 'year' ? TEXT_PRIMARY : TEXT_MUTED,
+                                    color: billingInterval === 'year' ? THEME.textPrimary : THEME.textMuted,
                                 }}
                             >
                                 Yearly
@@ -206,14 +208,14 @@ export default function SubscriptionScreen({ navigation }: SubscriptionScreenPro
                     <View
                         style={{
                             alignSelf: 'center',
-                            backgroundColor: GREEN_LIGHT,
+                            backgroundColor: THEME.secondaryLight,
                             paddingHorizontal: 14,
                             paddingVertical: 5,
                             borderRadius: 14,
                             marginBottom: 12,
                         }}
                     >
-                        <Text style={{ fontSize: 12, fontWeight: '600', color: GREEN }}>
+                        <Text style={{ fontSize: 12, fontWeight: '600', color: THEME.secondary }}>
                             Currently on {currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1)} plan
                         </Text>
                     </View>
@@ -223,12 +225,12 @@ export default function SubscriptionScreen({ navigation }: SubscriptionScreenPro
                 <View
                     style={{
                         marginHorizontal: 20,
-                        backgroundColor: CARD_BG,
+                        backgroundColor: THEME.cardBg,
                         borderRadius: 12,
                         padding: 16,
                         marginBottom: 12,
                         borderWidth: 1,
-                        borderColor: currentPlan === 'free' ? GREEN_BORDER : BORDER,
+                        borderColor: currentPlan === 'free' ? THEME.primary : THEME.border,
                         shadowColor: '#000',
                         shadowOffset: { width: 0, height: 1 },
                         shadowOpacity: 0.04,
@@ -238,21 +240,21 @@ export default function SubscriptionScreen({ navigation }: SubscriptionScreenPro
                 >
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                         <View>
-                            <Text style={{ fontSize: 15, fontWeight: '700', color: TEXT_PRIMARY }}>Free</Text>
-                            <Text style={{ fontSize: 12, color: TEXT_SECONDARY, marginTop: 2 }}>
+                            <Text style={{ fontSize: 15, fontWeight: '700', color: THEME.textPrimary }}>Free</Text>
+                            <Text style={{ fontSize: 12, color: THEME.textSecondary, marginTop: 2 }}>
                                 50 txns/mo  ·  10 customers  ·  3 AI scans/day
                             </Text>
                         </View>
                         {currentPlan === 'free' && (
                             <View
                                 style={{
-                                    backgroundColor: GREEN_LIGHT,
+                                    backgroundColor: THEME.secondaryLight,
                                     paddingHorizontal: 10,
                                     paddingVertical: 3,
                                     borderRadius: 10,
                                 }}
                             >
-                                <Text style={{ fontSize: 11, fontWeight: '600', color: GREEN }}>Current</Text>
+                                <Text style={{ fontSize: 11, fontWeight: '600', color: THEME.secondary }}>Current</Text>
                             </View>
                         )}
                     </View>
@@ -274,9 +276,9 @@ export default function SubscriptionScreen({ navigation }: SubscriptionScreenPro
                                 marginHorizontal: 20,
                                 marginBottom: 12,
                                 borderRadius: 14,
-                                backgroundColor: CARD_BG,
+                                backgroundColor: THEME.cardBg,
                                 borderWidth: isRecommended ? 1.5 : 1,
-                                borderColor: isRecommended ? GREEN : BORDER,
+                                borderColor: isRecommended ? THEME.primary : THEME.border,
                                 overflow: 'hidden',
                                 shadowColor: '#000',
                                 shadowOffset: { width: 0, height: 2 },
@@ -301,7 +303,7 @@ export default function SubscriptionScreen({ navigation }: SubscriptionScreenPro
                                                 style={{
                                                     fontSize: 18,
                                                     fontWeight: '700',
-                                                    color: TEXT_PRIMARY,
+                                                    color: THEME.textPrimary,
                                                 }}
                                             >
                                                 {planConfig.name}
@@ -309,9 +311,9 @@ export default function SubscriptionScreen({ navigation }: SubscriptionScreenPro
                                             {isRecommended && (
                                                 <View
                                                     style={{
-                                                        backgroundColor: GREEN_LIGHT,
+                                                        backgroundColor: THEME.secondaryLight,
                                                         borderWidth: 1,
-                                                        borderColor: GREEN_BORDER,
+                                                        borderColor: THEME.secondary,
                                                         paddingHorizontal: 8,
                                                         paddingVertical: 2,
                                                         borderRadius: 10,
@@ -322,7 +324,7 @@ export default function SubscriptionScreen({ navigation }: SubscriptionScreenPro
                                                         style={{
                                                             fontSize: 10,
                                                             fontWeight: '700',
-                                                            color: GREEN,
+                                                            color: THEME.secondary,
                                                         }}
                                                     >
                                                         Recommended
@@ -333,7 +335,7 @@ export default function SubscriptionScreen({ navigation }: SubscriptionScreenPro
                                         {isCurrentPlan && (
                                             <View
                                                 style={{
-                                                    backgroundColor: GREEN_LIGHT,
+                                                    backgroundColor: THEME.secondaryLight,
                                                     paddingHorizontal: 8,
                                                     paddingVertical: 2,
                                                     borderRadius: 8,
@@ -341,7 +343,7 @@ export default function SubscriptionScreen({ navigation }: SubscriptionScreenPro
                                                     alignSelf: 'flex-start',
                                                 }}
                                             >
-                                                <Text style={{ fontSize: 10, fontWeight: '600', color: GREEN }}>
+                                                <Text style={{ fontSize: 10, fontWeight: '600', color: THEME.secondary }}>
                                                     Active
                                                 </Text>
                                             </View>
@@ -353,7 +355,7 @@ export default function SubscriptionScreen({ navigation }: SubscriptionScreenPro
                                                 style={{
                                                     fontSize: 26,
                                                     fontWeight: '800',
-                                                    color: TEXT_PRIMARY,
+                                                    color: THEME.textPrimary,
                                                 }}
                                             >
                                                 {'\u20B9'}{price}
@@ -361,7 +363,7 @@ export default function SubscriptionScreen({ navigation }: SubscriptionScreenPro
                                             <Text
                                                 style={{
                                                     fontSize: 13,
-                                                    color: TEXT_MUTED,
+                                                    color: THEME.textMuted,
                                                     marginLeft: 2,
                                                     fontWeight: '400',
                                                 }}
@@ -372,14 +374,14 @@ export default function SubscriptionScreen({ navigation }: SubscriptionScreenPro
                                         {billingInterval === 'year' && (
                                             <View
                                                 style={{
-                                                    backgroundColor: GREEN_LIGHT,
+                                                    backgroundColor: THEME.secondaryLight,
                                                     paddingHorizontal: 8,
                                                     paddingVertical: 2,
                                                     borderRadius: 8,
                                                     marginTop: 4,
                                                 }}
                                             >
-                                                <Text style={{ fontSize: 11, fontWeight: '600', color: GREEN }}>
+                                                <Text style={{ fontSize: 11, fontWeight: '600', color: THEME.secondary }}>
                                                     Save {'\u20B9'}{planConfig.yearlySavings.toLocaleString('en-IN')}
                                                 </Text>
                                             </View>
@@ -391,7 +393,7 @@ export default function SubscriptionScreen({ navigation }: SubscriptionScreenPro
                                 <View
                                     style={{
                                         height: 1,
-                                        backgroundColor: BORDER_LIGHT,
+                                        backgroundColor: THEME.borderLight,
                                         marginBottom: 14,
                                     }}
                                 />
@@ -410,7 +412,7 @@ export default function SubscriptionScreen({ navigation }: SubscriptionScreenPro
                                             <Text
                                                 style={{
                                                     fontSize: 14,
-                                                    color: GREEN,
+                                                    color: THEME.primary,
                                                     fontWeight: '600',
                                                     marginRight: 10,
                                                     width: 18,
@@ -422,7 +424,7 @@ export default function SubscriptionScreen({ navigation }: SubscriptionScreenPro
                                             <Text
                                                 style={{
                                                     fontSize: 13,
-                                                    color: TEXT_SECONDARY,
+                                                    color: THEME.textSecondary,
                                                     fontWeight: '400',
                                                 }}
                                             >
@@ -438,7 +440,7 @@ export default function SubscriptionScreen({ navigation }: SubscriptionScreenPro
                                     disabled={isCurrentPlan}
                                     activeOpacity={0.85}
                                     style={{
-                                        backgroundColor: isCurrentPlan ? BORDER_LIGHT : GREEN,
+                                        backgroundColor: isCurrentPlan ? THEME.borderLight : THEME.primary,
                                         borderRadius: 10,
                                         paddingVertical: 13,
                                         alignItems: 'center',
@@ -448,7 +450,7 @@ export default function SubscriptionScreen({ navigation }: SubscriptionScreenPro
                                         style={{
                                             fontSize: 14,
                                             fontWeight: '700',
-                                            color: isCurrentPlan ? TEXT_MUTED : '#FFFFFF',
+                                            color: isCurrentPlan ? THEME.textMuted : '#FFFFFF',
                                         }}
                                     >
                                         {isCurrentPlan ? 'Current Plan' : `Get ${planConfig.name}`}
@@ -464,14 +466,14 @@ export default function SubscriptionScreen({ navigation }: SubscriptionScreenPro
                     onPress={handleRestore}
                     style={{ alignSelf: 'center', paddingVertical: 12 }}
                 >
-                    <Text style={{ fontSize: 13, color: TEXT_SECONDARY, fontWeight: '500' }}>
+                    <Text style={{ fontSize: 13, color: THEME.textSecondary, fontWeight: '500' }}>
                         Restore Purchases
                     </Text>
                 </TouchableOpacity>
 
                 {/* ─── Trust Bar ──────────────────────────────── */}
                 <View style={{ alignItems: 'center', paddingTop: 8, paddingBottom: 8 }}>
-                    <Text style={{ fontSize: 11, color: TEXT_MUTED, textAlign: 'center' }}>
+                    <Text style={{ fontSize: 11, color: THEME.textMuted, textAlign: 'center' }}>
                         Secured by Razorpay  ·  Cancel anytime
                     </Text>
                 </View>

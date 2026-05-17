@@ -195,7 +195,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
                             compact
                             feature="transactions"
                             message="Plan limit reached"
-                            onUpgrade={() => navigation.navigate('Upgrade')}
+                            onUpgrade={() => navigation.navigate('Subscription')}
                         />
                     </View>
                 )}
@@ -253,7 +253,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
                                     Alert.alert(
                                         'Limit Reached',
                                         'You have reached your monthly transaction limit. Please upgrade to continue.',
-                                        [{ text: 'Upgrade', onPress: () => navigation.navigate('Upgrade') }, { text: 'Cancel', style: 'cancel' }]
+                                        [{ text: 'Upgrade', onPress: () => navigation.navigate('Subscription') }, { text: 'Cancel', style: 'cancel' }]
                                     );
                                     return;
                                 }
@@ -322,7 +322,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
                         Alert.alert(
                             'Limit Reached',
                             'You have reached your monthly transaction limit. Please upgrade to continue.',
-                            [{ text: 'Upgrade', onPress: () => navigation.navigate('Upgrade') }, { text: 'Cancel', style: 'cancel' }]
+                            [{ text: 'Upgrade', onPress: () => navigation.navigate('Subscription') }, { text: 'Cancel', style: 'cancel' }]
                         );
                         return;
                     }

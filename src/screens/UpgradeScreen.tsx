@@ -53,7 +53,8 @@ export default function UpgradeScreen({ navigation }: any) {
         throw new Error(response.error);
       }
 
-      setAvailablePlans(response.data.availablePlans);
+      const plans = response.data.data?.availablePlans || response.data.availablePlans || [];
+      setAvailablePlans(plans);
     } catch (error: any) {
       console.error('Error loading upgrade options:', error);
       Alert.alert('Error', 'Failed to load upgrade options');
@@ -78,9 +79,11 @@ export default function UpgradeScreen({ navigation }: any) {
         throw new Error(response.error);
       }
 
+      const responseData = response.data.data || response.data;
+      
       // Update token with new plan
-      if (response.data.newToken) {
-        setToken(response.data.newToken);
+      if (responseData.newToken) {
+        setToken(responseData.newToken);
       }
 
       // Update local plan state
@@ -91,7 +94,7 @@ export default function UpgradeScreen({ navigation }: any) {
 
       Alert.alert(
         'Success',
-        `Successfully ${response.data.message}`,
+        `Successfully ${responseData.message || 'updated plan'}`,
         [
           {
             text: 'OK',

@@ -13,7 +13,7 @@ Notifications.setNotificationHandler({
   }),
 });
 
-export type NotificationType = 'HIGH_UDHAR_ALERT' | 'DAILY_SUMMARY' | 'WEEKLY_REMINDER' | 'TEST';
+export type NotificationType = 'HIGH_UDHAR_ALERT' | 'DAILY_SUMMARY' | 'WEEKLY_REMINDER' | 'TRANSACTION_ADDED' | 'TEST';
 
 export interface NotificationData {
   type: NotificationType;
@@ -292,6 +292,7 @@ export async function getNotificationPreferences(): Promise<Record<NotificationT
       HIGH_UDHAR_ALERT: true,
       DAILY_SUMMARY: true,
       WEEKLY_REMINDER: true,
+      TRANSACTION_ADDED: true,
       TEST: true,
     };
 
@@ -303,6 +304,7 @@ export async function getNotificationPreferences(): Promise<Record<NotificationT
       HIGH_UDHAR_ALERT: true,
       DAILY_SUMMARY: true,
       WEEKLY_REMINDER: true,
+      TRANSACTION_ADDED: true,
       TEST: true,
     };
   }

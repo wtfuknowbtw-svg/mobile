@@ -13,7 +13,10 @@ export const getBusinessProfile = async (): Promise<{ data?: BusinessProfile; er
     const response = await apiGet<{ data: BusinessProfile }>('/business-profile');
 
     if (response.error) {
-        return { error: response.error };
+        if (response.error.toLowerCase().includes('not found')) {
+            return { data: undefined };
+        }
+        throw new Error(response.error);
     }
 
     return { data: response.data?.data };

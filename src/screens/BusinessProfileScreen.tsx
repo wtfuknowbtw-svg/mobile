@@ -106,15 +106,36 @@ export default function BusinessProfileScreen({ navigation }: BusinessProfileScr
                 style={{
                     flexDirection: 'row',
                     alignItems: 'center',
-                    paddingTop: 52,
+                    paddingTop: Platform.OS === 'ios' ? 56 : 42,
                     paddingHorizontal: 20,
-                    paddingBottom: 16,
+                    paddingBottom: 24,
+                    backgroundColor: COLORS.primary,
+                    borderBottomLeftRadius: 24,
+                    borderBottomRightRadius: 24,
+                    shadowColor: COLORS.primary,
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.15,
+                    shadowRadius: 12,
+                    elevation: 8,
+                    zIndex: 10,
                 }}
             >
-                <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginRight: 16 }}>
-                    <Text style={{ fontSize: 18, color: COLORS.text }}>←</Text>
+                <TouchableOpacity
+                    onPress={() => navigation.goBack()}
+                    hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                    style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: 18,
+                        backgroundColor: 'rgba(255,255,255,0.15)',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        marginRight: 14,
+                    }}
+                >
+                    <Text style={{ fontSize: 18, color: COLORS.white, marginTop: -2 }}>{'‹'}</Text>
                 </TouchableOpacity>
-                <Text style={{ fontSize: 20, fontWeight: '800', color: COLORS.text }}>
+                <Text style={{ fontSize: 20, fontWeight: '800', color: COLORS.white }}>
                     Business Profile
                 </Text>
             </View>
@@ -124,16 +145,41 @@ export default function BusinessProfileScreen({ navigation }: BusinessProfileScr
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
             >
+                {/* Profile Avatar Card */}
+                <View style={{ alignItems: 'center', marginTop: -30, marginBottom: 24, zIndex: 11 }}>
+                    <View
+                        style={{
+                            width: 90,
+                            height: 90,
+                            borderRadius: 45,
+                            backgroundColor: COLORS.secondary,
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            borderWidth: 4,
+                            borderColor: COLORS.background,
+                            shadowColor: '#000',
+                            shadowOffset: { width: 0, height: 4 },
+                            shadowOpacity: 0.1,
+                            shadowRadius: 8,
+                            elevation: 5,
+                        }}
+                    >
+                        <Text style={{ fontSize: 40, fontWeight: '800', color: COLORS.white }}>
+                            {shopName ? shopName.charAt(0).toUpperCase() : 'B'}
+                        </Text>
+                    </View>
+                </View>
+
                 {/* First-time / empty state banner */}
                 {!isLoading && (!data?.data?.name) && (
                     <View
                         style={{
-                            backgroundColor: COLORS.primary + '10',
+                            backgroundColor: COLORS.secondaryLight,
                             borderRadius: 12,
                             borderWidth: 1,
-                            borderColor: COLORS.primary + '30',
+                            borderColor: COLORS.secondary,
                             padding: 16,
-                            marginBottom: 20,
+                            marginBottom: 24,
                             flexDirection: 'row',
                             alignItems: 'center',
                         }}
@@ -210,7 +256,7 @@ export default function BusinessProfileScreen({ navigation }: BusinessProfileScr
                     autoCapitalize="words"
                     style={{
                         backgroundColor: COLORS.card,
-                        borderRadius: 10,
+                        borderRadius: 12,
                         borderWidth: 1,
                         borderColor: COLORS.border,
                         paddingHorizontal: 16,
@@ -218,6 +264,11 @@ export default function BusinessProfileScreen({ navigation }: BusinessProfileScr
                         fontSize: 15,
                         color: COLORS.text,
                         marginBottom: 20,
+                        shadowColor: '#000',
+                        shadowOffset: { width: 0, height: 1 },
+                        shadowOpacity: 0.04,
+                        shadowRadius: 3,
+                        elevation: 1,
                     }}
                 />
 
@@ -233,7 +284,7 @@ export default function BusinessProfileScreen({ navigation }: BusinessProfileScr
                     autoCapitalize="words"
                     style={{
                         backgroundColor: COLORS.card,
-                        borderRadius: 10,
+                        borderRadius: 12,
                         borderWidth: 1,
                         borderColor: COLORS.border,
                         paddingHorizontal: 16,
@@ -241,6 +292,11 @@ export default function BusinessProfileScreen({ navigation }: BusinessProfileScr
                         fontSize: 15,
                         color: COLORS.text,
                         marginBottom: 20,
+                        shadowColor: '#000',
+                        shadowOffset: { width: 0, height: 1 },
+                        shadowOpacity: 0.04,
+                        shadowRadius: 3,
+                        elevation: 1,
                     }}
                 />
 
@@ -254,10 +310,10 @@ export default function BusinessProfileScreen({ navigation }: BusinessProfileScr
                             key={bt.value}
                             onPress={() => setBusinessType(bt.value)}
                             style={{
-                                backgroundColor: businessType === bt.value ? COLORS.primary + '15' : COLORS.card,
-                                borderRadius: 10,
+                                backgroundColor: businessType === bt.value ? COLORS.secondaryLight : COLORS.card,
+                                borderRadius: 12,
                                 borderWidth: 1.5,
-                                borderColor: businessType === bt.value ? COLORS.primary : COLORS.border,
+                                borderColor: businessType === bt.value ? COLORS.secondary : COLORS.border,
                                 paddingHorizontal: 14,
                                 paddingVertical: 10,
                             }}
@@ -266,7 +322,7 @@ export default function BusinessProfileScreen({ navigation }: BusinessProfileScr
                                 style={{
                                     fontSize: 14,
                                     fontWeight: businessType === bt.value ? '700' : '500',
-                                    color: businessType === bt.value ? COLORS.primary : COLORS.text,
+                                    color: businessType === bt.value ? COLORS.secondary : COLORS.text,
                                 }}
                             >
                                 {bt.label}
@@ -287,7 +343,7 @@ export default function BusinessProfileScreen({ navigation }: BusinessProfileScr
                     autoCapitalize="characters"
                     style={{
                         backgroundColor: COLORS.card,
-                        borderRadius: 10,
+                        borderRadius: 12,
                         borderWidth: 1,
                         borderColor: COLORS.border,
                         paddingHorizontal: 16,
@@ -295,6 +351,11 @@ export default function BusinessProfileScreen({ navigation }: BusinessProfileScr
                         fontSize: 15,
                         color: COLORS.text,
                         marginBottom: 40,
+                        shadowColor: '#000',
+                        shadowOffset: { width: 0, height: 1 },
+                        shadowOpacity: 0.04,
+                        shadowRadius: 3,
+                        elevation: 1,
                     }}
                 />
             </ScrollView>
@@ -306,11 +367,11 @@ export default function BusinessProfileScreen({ navigation }: BusinessProfileScr
                     disabled={mutation.isPending}
                     activeOpacity={0.85}
                     style={{
-                        backgroundColor: COLORS.success,
+                        backgroundColor: COLORS.primary,
                         borderRadius: 14,
                         paddingVertical: 16,
                         alignItems: 'center',
-                        shadowColor: COLORS.success,
+                        shadowColor: COLORS.primary,
                         shadowOffset: { width: 0, height: 4 },
                         shadowOpacity: 0.3,
                         shadowRadius: 8,
@@ -319,9 +380,9 @@ export default function BusinessProfileScreen({ navigation }: BusinessProfileScr
                     }}
                 >
                     {mutation.isPending ? (
-                        <ActivityIndicator color={COLORS.white} />
+                        <ActivityIndicator color={COLORS.secondary} />
                     ) : (
-                        <Text style={{ fontSize: 16, fontWeight: '700', color: COLORS.white }}>
+                        <Text style={{ fontSize: 16, fontWeight: '700', color: COLORS.secondary }}>
                             💾 Save Profile
                         </Text>
                     )}
