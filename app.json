@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "ApnaKhata",
-    "slug": "apnakhata",
+    "slug": "mobile",
     "version": "1.0.0",
     "newArchEnabled": true,
     "orientation": "portrait",
@@ -41,7 +41,10 @@
       },
       "predictiveBackGestureEnabled": false,
       "permissions": [
-        "android.permission.RECORD_AUDIO"
+        "android.permission.RECORD_AUDIO",
+        "android.permission.CAMERA",
+        "android.permission.READ_CONTACTS",
+        "android.permission.WRITE_CONTACTS"
       ],
       "package": "com.apnakhata.app"
     },
@@ -52,6 +55,7 @@
       "eas": {
         "projectId": "9b2d92cf-0791-45c3-950b-e507c722bf22"
       }
-    }
+    },
+    "owner": "holabhos"
   }
 }
