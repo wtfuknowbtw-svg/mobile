@@ -1,59 +1,144 @@
+// OTP Provider: MSG91 | https://docs.msg91.com/otp
 import { API_BASE_URL } from '../constants';
 
-const BACKEND_URL = API_BASE_URL; // http://...:3000/api
+const MSG91_AUTH_KEY = process.env.EXPO_PUBLIC_MSG91_AUTH_KEY ?? '';
+const MSG91_TEMPLATE_ID = process.env.EXPO_PUBLIC_MSG91_TEMPLATE_ID ?? '';
 
-export const sendOtp = async (phone: string) => {
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface SendOtpResult {
+    success: boolean;
+    otpId?: string;
+    error?: string;
+}
+
+interface VerifyOtpResult {
+    success: boolean;
+    verified?: boolean;
+    user?: { id: string; phone: string };
+    token?: string;
+    error?: string;
+}
+
+interface Msg91Response {
+    request_id?: string;
+    type?: string;
+    message?: string;
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+async function parseJsonSafe<T>(response: Response): Promise<T> {
+    const contentType = response.headers.get('content-type') ?? '';
+    if (!contentType.includes('application/json')) {
+        throw new Error(`Unexpected content-type: ${contentType} (status ${response.status})`);
+    }
+    return response.json() as Promise<T>;
+}
+
+// ─── sendOtp ─────────────────────────────────────────────────────────────────
+
+/**
+ * Sends an OTP to the given 10-digit phone number via MSG91.
+ * Returns { success, otpId } on success, or { success: false, error } on failure.
+ */
+export async function sendOtp(phone: string): Promise<SendOtpResult> {
     try {
-        const response = await fetch(`${BACKEND_URL}/auth/send-otp`, {
+        const response = await fetch('https://api.msg91.com/api/v5/otp', {
+            method: 'POST',
+            headers: {
+                'authkey': MSG91_AUTH_KEY,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                template_id: MSG91_TEMPLATE_ID,
+                mobile: `91${phone}`,
+                otp_length: 6,
+                otp_expiry: 5,
+            }),
+        });
+
+        const data = await parseJsonSafe<Msg91Response>(response);
+
+        if (!response.ok || data.type === 'error' || !data.request_id) {
+            return {
+                success: false,
+                error: data.message ?? 'Failed to send OTP via MSG91',
+            };
+        }
+
+        return { success: true, otpId: data.request_id };
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Network error. Please try again.';
+        return { success: false, error: message };
+    }
+}
+
+// ─── verifyOtp ───────────────────────────────────────────────────────────────
+
+/**
+ * 1. Verifies the OTP with MSG91 using the request_id returned by sendOtp.
+ * 2. On success, calls the backend /auth/session to create a session.
+ * Returns { success, user, token } from the session response or { success: false, error } on failure.
+ */
+export async function verifyOtp(
+    phone: string,
+    otpId: string,
+    otp: string,
+): Promise<VerifyOtpResult> {
+    try {
+        // Step 1: Verify with MSG91 (Robustly passing as both URL parameters and JSON body)
+        const verifyUrl = `https://api.msg91.com/api/v5/otp/verify?otp=${otp}&request_id=${otpId}`;
+        const msg91Response = await fetch(verifyUrl, {
+            method: 'POST',
+            headers: {
+                'authkey': MSG91_AUTH_KEY,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                request_id: otpId,
+                otp: otp,
+            }),
+        });
+
+        const msg91Data = await parseJsonSafe<Msg91Response>(msg91Response);
+
+        if (!msg91Response.ok || msg91Data.type !== 'success') {
+            return {
+                success: false,
+                error: msg91Data.message ?? 'OTP verification failed',
+            };
+        }
+
+        // Step 2: Create session on our backend
+        const sessionResponse = await fetch(`${API_BASE_URL}/auth/session`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ phone }),
         });
 
-        const data = await response.json();
-        if (!response.ok) {
-            return { success: false, error: data.error || 'Failed to send OTP' };
-        }
+        const sessionData = await parseJsonSafe<{
+            success?: boolean;
+            user?: { id: string; phone: string };
+            token?: string;
+            error?: string;
+            message?: string;
+        }>(sessionResponse);
 
-        return { success: true };
-    } catch (error: any) {
-        console.error('sendOtp error:', error);
-        return { success: false, error: 'Network error. Check backend.' };
-    }
-};
-
-export const verifyOtp = async (phone: string, otp: string) => {
-    try {
-        const response = await fetch(`${BACKEND_URL}/mobile-login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ phone, otp }),
-        });
-
-        // Capture raw response to see what's coming
-        const text = await response.text();
-        console.log('RAW RESPONSE:', text);
-
-        let data;
-        try {
-            data = JSON.parse(text);
-        } catch (e) {
-            console.log('Backend returned HTML, not JSON!');
-            console.log('FULL RESPONSE:', text);
-            return { success: false, error: 'Server error' };
-        }
-
-        if (!response.ok) {
-            return { success: false, error: data.error || 'Verification failed' };
+        if (!sessionResponse.ok || !sessionData.success) {
+            return {
+                success: false,
+                error: sessionData.error ?? sessionData.message ?? 'Session creation failed',
+            };
         }
 
         return {
             success: true,
-            user: data.user,
-            token: data.token
+            user: sessionData.user,
+            token: sessionData.token,
         };
-    } catch (error: any) {
-        console.error('verifyOtp error:', error);
-        return { success: false, error: 'Network error. Check backend.' };
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Network error. Please try again.';
+        return { success: false, error: message };
     }
-};
+}

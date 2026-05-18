@@ -1,13 +1,13 @@
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
-import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../constants';
 
 // Configure notification handler
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
     shouldPlaySound: true,
     shouldSetBadge: true,
   }),
@@ -24,6 +24,8 @@ export interface NotificationData {
   count?: number;
   total?: number;
   language?: 'hi' | 'en';
+  // Index signature required by expo-notifications' NotificationContentInput.data: Record<string, unknown>
+  [key: string]: unknown;
 }
 
 // Register for push notifications
@@ -268,7 +270,7 @@ export async function scheduleWeeklyReminder(
   const trigger: Notifications.WeeklyTriggerInput = {
     type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
     channelId: 'default',
-    weekday: 1, // Monday (0 = Sunday, 1 = Monday, etc.)
+    weekday: 2, // Monday (1 = Sunday, 2 = Monday, per expo-notifications convention)
     hour: 10,
     minute: 0,
   };

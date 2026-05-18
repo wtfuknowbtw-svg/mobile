@@ -12,6 +12,7 @@ import {
     Dimensions,
     Modal,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../constants';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
@@ -400,6 +401,28 @@ export default function CameraScanScreen({ navigation }: CameraScanScreenProps) 
                 <View style={{ width: 40 }} />
             </View>
 
+            {/* Tip Card */}
+            <View style={{
+                marginHorizontal: 24,
+                marginBottom: 16,
+                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                padding: 12,
+                borderRadius: 12,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+            }}>
+                <Text style={{ fontSize: 16, marginRight: 8 }}>💡</Text>
+                <View>
+                    <Text style={{ color: '#ffffff', fontSize: 14, fontWeight: '600' }}>
+                        बिल या रसीद की फोटो लें
+                    </Text>
+                    <Text style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: 12 }}>
+                        Take photo of bill or receipt
+                    </Text>
+                </View>
+            </View>
+
             {/* Camera Preview / Captured Image */}
             <View style={{ flex: 1, marginHorizontal: 24, borderRadius: 20, overflow: 'hidden' }}>
                 {isProcessing && capturedImage ? (
@@ -418,7 +441,7 @@ export default function CameraScanScreen({ navigation }: CameraScanScreenProps) 
                         }}>
                             {/* AI Reading text with pulse animation */}
                             <Animated.View style={{ opacity: pulseAnim }}>
-                                <ActivityIndicator size="large" color="#00ff88" />
+                                <ActivityIndicator size="large" color="#F5A623" />
                                 <Text style={{ 
                                     fontSize: 18, 
                                     color: '#ffffff', 
@@ -459,7 +482,7 @@ export default function CameraScanScreen({ navigation }: CameraScanScreenProps) 
                                 height: 50,
                                 borderTopWidth: 4,
                                 borderLeftWidth: 4,
-                                borderColor: '#00ff88',
+                                borderColor: '#F5A623',
                                 borderTopLeftRadius: 2,
                             }} />
                         </Animated.View>
@@ -474,7 +497,7 @@ export default function CameraScanScreen({ navigation }: CameraScanScreenProps) 
                                 height: 50,
                                 borderTopWidth: 4,
                                 borderRightWidth: 4,
-                                borderColor: '#00ff88',
+                                borderColor: '#F5A623',
                                 borderTopRightRadius: 2,
                             }} />
                         </Animated.View>
@@ -489,7 +512,7 @@ export default function CameraScanScreen({ navigation }: CameraScanScreenProps) 
                                 height: 50,
                                 borderBottomWidth: 4,
                                 borderLeftWidth: 4,
-                                borderColor: '#00ff88',
+                                borderColor: '#F5A623',
                                 borderBottomLeftRadius: 2,
                             }} />
                         </Animated.View>
@@ -504,7 +527,7 @@ export default function CameraScanScreen({ navigation }: CameraScanScreenProps) 
                                 height: 50,
                                 borderBottomWidth: 4,
                                 borderRightWidth: 4,
-                                borderColor: '#00ff88',
+                                borderColor: '#F5A623',
                                 borderBottomRightRadius: 2,
                             }} />
                         </Animated.View>
@@ -516,7 +539,7 @@ export default function CameraScanScreen({ navigation }: CameraScanScreenProps) 
                                 left: 40,
                                 right: 40,
                                 height: 2,
-                                backgroundColor: '#00ff88',
+                                backgroundColor: '#F5A623',
                                 borderRadius: 1,
                                 transform: [
                                     {
@@ -526,7 +549,7 @@ export default function CameraScanScreen({ navigation }: CameraScanScreenProps) 
                                         }),
                                     },
                                 ],
-                                shadowColor: '#00ff88',
+                                shadowColor: '#F5A623',
                                 shadowOffset: { width: 0, height: 0 },
                                 shadowOpacity: 0.6,
                                 shadowRadius: 4,
@@ -609,45 +632,7 @@ export default function CameraScanScreen({ navigation }: CameraScanScreenProps) 
                             alignItems: 'center',
                         }}
                     >
-                        <View style={{ position: 'relative' }}>
-                            {/* Gallery icon - multiple photos */}
-                            <View style={{
-                                width: 24,
-                                height: 24,
-                                backgroundColor: '#ffffff',
-                                borderRadius: 4,
-                                justifyContent: 'center',
-                                alignItems: 'center',
-                            }}>
-                                <View style={{
-                                    width: 16,
-                                    height: 16,
-                                    backgroundColor: '#0a0a0a',
-                                    borderRadius: 2,
-                                }} />
-                            </View>
-                            {/* Small photo stack indicator */}
-                            <View style={{
-                                position: 'absolute',
-                                top: -2,
-                                right: -2,
-                                width: 12,
-                                height: 12,
-                                backgroundColor: '#00ff88',
-                                borderRadius: 6,
-                                borderWidth: 2,
-                                borderColor: '#0a0a0a',
-                                justifyContent: 'center',
-                                alignItems: 'center',
-                            }}>
-                                <View style={{
-                                    width: 4,
-                                    height: 4,
-                                    backgroundColor: '#0a0a0a',
-                                    borderRadius: 2,
-                                }} />
-                            </View>
-                        </View>
+                        <Ionicons name="images-outline" size={28} color="#ffffff" />
                     </TouchableOpacity>
 
                     {/* Capture Button */}
@@ -663,8 +648,8 @@ export default function CameraScanScreen({ navigation }: CameraScanScreenProps) 
                             justifyContent: 'center',
                             alignItems: 'center',
                             borderWidth: 4,
-                            borderColor: '#00ff88',
-                            shadowColor: '#00ff88',
+                            borderColor: '#1A3C6E',
+                            shadowColor: '#1A3C6E',
                             shadowOffset: { width: 0, height: 4 },
                             shadowOpacity: 0.3,
                             shadowRadius: 8,
@@ -672,13 +657,13 @@ export default function CameraScanScreen({ navigation }: CameraScanScreenProps) 
                         }}
                     >
                         {isProcessing ? (
-                            <ActivityIndicator size="large" color="#00ff88" />
+                            <ActivityIndicator size="large" color="#F5A623" />
                         ) : (
                             <View style={{
                                 width: 60,
                                 height: 60,
                                 borderRadius: 30,
-                                backgroundColor: '#00ff88',
+                                backgroundColor: '#1A3C6E',
                                 justifyContent: 'center',
                                 alignItems: 'center',
                             }}>
@@ -705,12 +690,11 @@ export default function CameraScanScreen({ navigation }: CameraScanScreenProps) 
                             alignItems: 'center',
                         }}
                     >
-                        <Text style={{ 
-                            fontSize: 24, 
-                            color: flashOn === 'on' ? '#00ff88' : '#ffffff' 
-                        }}>
-                            ⚡
-                        </Text>
+                        <Ionicons 
+                            name={flashOn === 'on' ? "flash" : "flash-off"} 
+                            size={24} 
+                            color={flashOn === 'on' ? '#F5A623' : '#ffffff'} 
+                        />
                     </TouchableOpacity>
                 </View>
             </View>
@@ -788,7 +772,7 @@ export default function CameraScanScreen({ navigation }: CameraScanScreenProps) 
                             <TouchableOpacity
                                 style={{
                                     flex: 1,
-                                    backgroundColor: '#00ff88',
+                                    backgroundColor: '#1A3C6E',
                                     paddingVertical: 16,
                                     paddingHorizontal: 24,
                                     borderRadius: 12,
@@ -800,7 +784,7 @@ export default function CameraScanScreen({ navigation }: CameraScanScreenProps) 
                                 <Text style={{
                                     fontSize: 16,
                                     fontWeight: '600',
-                                    color: '#000000',
+                                    color: '#ffffff',
                                 }}>
                                     {i18n.t('common.tryAgain')}
                                 </Text>
