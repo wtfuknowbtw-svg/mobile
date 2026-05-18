@@ -67,7 +67,11 @@ export async function apiRequest<T = any>(
 
         return { data };
     } catch (error: any) {
-        console.error('API Request Error:', error);
+        if (error?.message === 'Network request failed') {
+            console.log('API Request - Network Request Failed (Expected when offline)');
+        } else {
+            console.error('API Request Error:', error);
+        }
         return {
             error: error.message || 'Network error. Please check your connection.',
         };

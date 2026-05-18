@@ -2,16 +2,29 @@ import { apiGet, apiPost, apiPut } from '../lib/apiClient';
 import type { Customer, Transaction } from '../types';
 
 export const getCustomers = async (businessId?: string): Promise<{ data?: Customer[]; error?: string }> => {
-    const response = await apiGet<{ data: Customer[] }>('/customers');
-    
-    if (response.error) {
-        return { error: response.error };
-    }
+    try {
+        const response = await apiGet<{ data: Customer[] }>('/customers');
+        
+        if (response.error) {
+            if (response.error.includes('Network request failed') || response.error.includes('Network error') || response.error.includes('network error')) {
+                throw { code: 'NETWORK_ERROR', message: 'No internet connection' };
+            }
+            return { error: response.error };
+        }
 
-    // Backend returns data in the format { data: Customer[] }
-    const customers = response.data?.data || [];
-    
-    return { data: customers };
+        // Backend returns data in the format { data: Customer[] }
+        const customers = response.data?.data || [];
+        
+        return { data: customers };
+    } catch (error: any) {
+        if (error && error.code === 'NETWORK_ERROR') {
+            throw error;
+        }
+        if (error instanceof TypeError && error.message.includes('Network request failed')) {
+            throw { code: 'NETWORK_ERROR', message: 'No internet connection' };
+        }
+        throw error;
+    }
 };
 
 export const getCustomer = async (id: string): Promise<{ data?: Customer; error?: string }> => {
@@ -68,13 +81,26 @@ export const updateCustomer = async (
 export const getCustomerTransactions = async (
     customerId: string
 ): Promise<{ data?: Transaction[]; error?: string }> => {
-    // Use the customer endpoint which returns customer object with transactions included
-    const response = await apiGet<{ data: Customer }>(`/customers?id=${customerId}`);
-    
-    if (response.error) {
-        return { error: response.error };
-    }
+    try {
+        // Use the customer endpoint which returns customer object with transactions included
+        const response = await apiGet<{ data: Customer }>(`/customers?id=${customerId}`);
+        
+        if (response.error) {
+            if (response.error.includes('Network request failed') || response.error.includes('Network error') || response.error.includes('network error')) {
+                throw { code: 'NETWORK_ERROR', message: 'No internet connection' };
+            }
+            return { error: response.error };
+        }
 
-    const customer = response.data?.data;
-    return { data: customer?.transactions || [] };
+        const customer = response.data?.data;
+        return { data: customer?.transactions || [] };
+    } catch (error: any) {
+        if (error && error.code === 'NETWORK_ERROR') {
+            throw error;
+        }
+        if (error instanceof TypeError && error.message.includes('Network request failed')) {
+            throw { code: 'NETWORK_ERROR', message: 'No internet connection' };
+        }
+        throw error;
+    }
 };

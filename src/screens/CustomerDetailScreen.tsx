@@ -25,6 +25,7 @@ import { useSubscription } from '../context/SubscriptionContext';
 import { formatCurrency } from '../utils/currency';
 import { getInitialColor } from '../utils/ui';
 import { openWhatsAppReminder } from '../utils/whatsappHelper';
+import OfflineBanner from '../components/OfflineBanner';
 
 interface CustomerDetailScreenProps {
     navigation: any;
@@ -191,6 +192,7 @@ export default function CustomerDetailScreen({ navigation, route }: CustomerDeta
     return (
         <View style={styles.container}>
             <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
+            <OfflineBanner />
 
             {/* Header */}
             <View style={styles.header}>
@@ -256,7 +258,14 @@ export default function CustomerDetailScreen({ navigation, route }: CustomerDeta
             <ScrollView
                 style={{ flex: 1, paddingHorizontal: 20 }}
                 showsVerticalScrollIndicator={false}
-                refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} />}
+                refreshControl={
+                    <RefreshControl
+                        refreshing={isRefetching}
+                        onRefresh={refetch}
+                        colors={[COLORS.primary]}
+                        tintColor={COLORS.primary}
+                    />
+                }
             >
                 {isLoading ? (
                     <ActivityIndicator style={{ marginTop: 40 }} color={COLORS.primary} />

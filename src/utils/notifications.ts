@@ -1,6 +1,7 @@
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { API_BASE_URL } from '../constants';
 
 // Configure notification handler
@@ -31,6 +32,12 @@ export interface NotificationData {
 // Register for push notifications
 export async function registerForPushNotifications(businessId: string, phone: string): Promise<string | null> {
   try {
+    // Check if running in Expo Go (remote notifications are not supported in Expo Go client on SDK 53)
+    if (Constants.executionEnvironment === ExecutionEnvironment.StoreClient) {
+      console.log('Push Token Registration bypassed: Remote push notifications are not supported in Expo Go client on SDK 53. Use a development build to test remote notifications.');
+      return null;
+    }
+
     // Check if device supports push notifications
     if (!Device.isDevice) {
       console.log('Push notifications are not supported on simulator/emulator');

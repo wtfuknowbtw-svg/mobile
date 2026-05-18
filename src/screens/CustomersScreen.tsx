@@ -23,6 +23,7 @@ import type { Customer } from '../types';
 import i18n from '../i18n';
 import { useSubscription } from '../context/SubscriptionContext';
 import UsageProgressBar from '../components/UsageProgressBar';
+import OfflineBanner from '../components/OfflineBanner';
 import { openWhatsAppReminder } from '../utils/whatsappHelper';
 import { formatCurrency } from '../utils/currency';
 import { getInitialColor } from '../utils/ui';
@@ -239,6 +240,7 @@ export default function CustomersScreen({ navigation }: CustomersScreenProps) {
     return (
         <View style={{ flex: 1, backgroundColor: COLORS.background }}>
             <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
+            <OfflineBanner />
 
             {/* Header */}
             <View style={{

@@ -23,6 +23,7 @@ import { useSubscription } from '../context/SubscriptionContext';
 import { Ionicons } from '@expo/vector-icons';
 import { formatCurrency } from '../utils/currency';
 import { getInitialColor } from '../utils/ui';
+import OfflineBanner from '../components/OfflineBanner';
 
 const { width } = Dimensions.get('window');
 
@@ -241,6 +242,7 @@ export default function ReportsScreen({ navigation }: ReportsScreenProps) {
     return (
         <View style={styles.container}>
             <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
+            <OfflineBanner />
 
             {/* Header */}
             <View style={styles.header}>

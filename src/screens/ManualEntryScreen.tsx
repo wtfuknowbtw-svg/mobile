@@ -25,6 +25,9 @@ import { useSubscription } from '../context/SubscriptionContext';
 import { Ionicons } from '@expo/vector-icons';
 import { getInitialColor } from '../utils/ui';
 import { triggerHighUdharAlert, isNotificationEnabled } from '../utils/notifications';
+import { useNetworkStatus } from '../hooks/useNetworkStatus';
+import { useOfflineQueue } from '../store/useOfflineQueue';
+import SyncStatusBar from '../components/SyncStatusBar';
 
 const { width } = Dimensions.get('window');
 
@@ -45,6 +48,7 @@ interface ManualEntryScreenProps {
 export default function ManualEntryScreen({ navigation, route }: ManualEntryScreenProps) {
     const { businessId, language } = useAppStore();
     const { syncSubscriptionStatus } = useSubscription();
+    const { isOnline } = useNetworkStatus();
     const prefilledData = route?.params?.prefilledData;
     
     // Form State
@@ -109,7 +113,6 @@ export default function ManualEntryScreen({ navigation, route }: ManualEntryScre
             console.error(error);
         }
     });
-
     const handleSave = () => {
         if (!customerName && !selectedCustomer) {
             Alert.alert("Error", "Please select or enter a customer name");
@@ -120,7 +123,7 @@ export default function ManualEntryScreen({ navigation, route }: ManualEntryScre
             return;
         }
 
-        mutation.mutate({
+        const payload = {
             customerName: selectedCustomer?.name || customerName,
             customerId: selectedCustomer?.id,
             itemName: item || 'Manual Entry',
@@ -128,12 +131,25 @@ export default function ManualEntryScreen({ navigation, route }: ManualEntryScre
             unit: unit || undefined,
             price: Number(amount),
             type: type,
-            sourceType: 'manual',
+            sourceType: 'manual' as const,
             date: date.toISOString(),
             rawText: notes || undefined, // Store notes in rawText
             isConfirmed: true,
             businessId,
-        });
+        };
+
+        if (isOnline) {
+            mutation.mutate(payload);
+        } else {
+            useOfflineQueue.getState().addToQueue(payload);
+            Alert.alert(
+                language === 'hi' ? 'ऑफलाइन सेव हो गया!' : 'Saved offline!',
+                language === 'hi'
+                    ? 'इंटरनेट आने पर अपने आप sync होगा।'
+                    : 'Will sync automatically when internet returns.'
+            );
+            navigation.goBack();
+        }
     };
 
     const renderInputCard = (label: string, icon: string, color: string, children: React.ReactNode, row = false) => (
@@ -151,6 +167,7 @@ export default function ManualEntryScreen({ navigation, route }: ManualEntryScre
     return (
         <View style={styles.container}>
             <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+            <SyncStatusBar />
 
             {/* Header */}
             <View style={styles.header}>

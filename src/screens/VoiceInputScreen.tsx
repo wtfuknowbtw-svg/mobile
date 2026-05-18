@@ -17,6 +17,9 @@ import { Audio } from 'expo-av';
 import { COLORS } from '../constants';
 import { processVoiceAudio } from '../api/ai';
 import { useSubscription } from '../context/SubscriptionContext';
+import { useNetworkStatus } from '../hooks/useNetworkStatus';
+import { useOfflineQueue } from '../store/useOfflineQueue';
+import { useAppStore } from '../store/useAppStore';
 
 interface VoiceInputScreenProps {
     navigation: any;
@@ -32,6 +35,8 @@ const LANGUAGES = [
 
 export default function VoiceInputScreen({ navigation }: VoiceInputScreenProps) {
     const { hasAIFeatures, getUpgradeMessage, getUpgradeCTA } = useSubscription();
+    const { isOnline } = useNetworkStatus();
+    const { language } = useAppStore();
     const [isListening, setIsListening] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
     const [transcript, setTranscript] = useState('');
@@ -104,6 +109,27 @@ export default function VoiceInputScreen({ navigation }: VoiceInputScreenProps) 
 
     // ── Recording Handlers ───────────────────────────────────────────────────
     async function startRecording() {
+        if (!isOnline) {
+            const dummyPayload = {
+                customerName: 'Voice Entry',
+                itemName: 'Voice Transaction',
+                price: 0,
+                type: 'cash' as const,
+                sourceType: 'voice' as const,
+                date: new Date().toISOString(),
+                isConfirmed: true,
+            };
+            useOfflineQueue.getState().addToQueue(dummyPayload);
+            Alert.alert(
+                language === 'hi' ? 'ऑफलाइन सेव हो गया!' : 'Saved offline!',
+                language === 'hi'
+                    ? 'इंटरनेट आने पर अपने आप sync होगा।'
+                    : 'Will sync automatically when internet returns.'
+            );
+            navigation.goBack();
+            return;
+        }
+
         // Check AI features access
         if (!hasAIFeatures()) {
             Alert.alert(

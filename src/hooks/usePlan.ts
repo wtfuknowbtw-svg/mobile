@@ -151,7 +151,11 @@ export function usePlan() {
       
       console.log('Subscription status synced:', fullStatus);
     } catch (error: any) {
-      console.error('Error syncing subscription status:', error);
+      if (error?.message === 'Network request failed') {
+        console.log('Error syncing subscription status - Network Request Failed (Expected when offline)');
+      } else {
+        console.error('Error syncing subscription status:', error);
+      }
       
       // Fallback to mock data for various error scenarios
       const needsFallback = 
@@ -188,7 +192,7 @@ export function usePlan() {
       setSubscriptionStatus(prev => ({
         ...prev,
         isLoading: false,
-        error: error.message || 'Failed to sync subscription status',
+        error: error.message === 'Network request failed' ? null : (error.message || 'Failed to sync subscription status'),
       }));
     }
   };

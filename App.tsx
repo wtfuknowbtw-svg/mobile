@@ -1,40 +1,74 @@
 import React from 'react';
-import { Platform } from 'react-native';
+import { Platform, ActivityIndicator, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, useIsRestoring } from '@tanstack/react-query';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { SubscriptionProvider } from './src/context/SubscriptionContext';
 import AppNavigator from './src/navigation/AppNavigator';
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
+import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
+import NetInfo from '@react-native-community/netinfo';
+
+let isOffline = false;
+NetInfo.addEventListener(state => {
+  isOffline = !state.isConnected;
+});
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry: 2,
-      staleTime: 5 * 60 * 1000, // 5 minutes
+      staleTime: 1000 * 60 * 5,       // 5 minutes
+      gcTime: 1000 * 60 * 60 * 24,    // 24 hours
+      retry: (count, error) => !isOffline && count < 2,
     },
   },
 });
 
+const persister = createAsyncStoragePersister({
+  storage: AsyncStorage,
+});
+
+function AppContent() {
+  const isRestoring = useIsRestoring();
+
+  if (isRestoring) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFFFFF' }}>
+        <ActivityIndicator size="large" color="#1A3C6E" />
+      </View>
+    );
+  }
+
+  return <AppNavigator />;
+}
+
 export default function App() {
-  // On web, we don't need GestureHandlerRootView or SafeAreaProvider
   if (Platform.OS === 'web') {
     return (
-      <QueryClientProvider client={queryClient}>
+      <PersistQueryClientProvider
+        client={queryClient}
+        persistOptions={{ persister, maxAge: 86400000 }}
+      >
         <SubscriptionProvider>
-          <AppNavigator />
+          <AppContent />
         </SubscriptionProvider>
-      </QueryClientProvider>
+      </PersistQueryClientProvider>
     );
   }
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <QueryClientProvider client={queryClient}>
+        <PersistQueryClientProvider
+          client={queryClient}
+          persistOptions={{ persister, maxAge: 86400000 }}
+        >
           <SubscriptionProvider>
-            <AppNavigator />
+            <AppContent />
           </SubscriptionProvider>
-        </QueryClientProvider>
+        </PersistQueryClientProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

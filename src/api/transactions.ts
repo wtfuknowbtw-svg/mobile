@@ -2,16 +2,29 @@ import { apiGet, apiPost, apiPut, apiDelete } from '../lib/apiClient';
 import type { Transaction } from '../types';
 
 export const getTransactions = async (businessId?: string): Promise<{ data?: Transaction[]; error?: string }> => {
-    const response = await apiGet<{ data: Transaction[] }>('/transactions');
-    
-    if (response.error) {
-        return { error: response.error };
-    }
+    try {
+        const response = await apiGet<{ data: Transaction[] }>('/transactions');
+        
+        if (response.error) {
+            if (response.error.includes('Network request failed') || response.error.includes('Network error') || response.error.includes('network error')) {
+                throw { code: 'NETWORK_ERROR', message: 'No internet connection' };
+            }
+            return { error: response.error };
+        }
 
-    // Backend returns data in the format { data: Transaction[] }
-    const transactions = response.data?.data || [];
-    
-    return { data: transactions };
+        // Backend returns data in the format { data: Transaction[] }
+        const transactions = response.data?.data || [];
+        
+        return { data: transactions };
+    } catch (error: any) {
+        if (error && error.code === 'NETWORK_ERROR') {
+            throw error;
+        }
+        if (error instanceof TypeError && error.message.includes('Network request failed')) {
+            throw { code: 'NETWORK_ERROR', message: 'No internet connection' };
+        }
+        throw error;
+    }
 };
 
 export const createTransaction = async (

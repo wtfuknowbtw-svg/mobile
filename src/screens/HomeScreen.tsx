@@ -14,18 +14,25 @@ import {
     FlatList,
     StyleSheet,
     Platform,
+    Linking,
+    TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { COLORS } from '../constants';
 import { useAppStore } from '../store/useAppStore';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getTransactions, deleteTransaction } from '../api/transactions';
+import { getCustomers } from '../api/customers';
 import type { Transaction } from '../types';
 import i18n from '../i18n';
 import UpgradeBanner from '../components/UpgradeBanner';
 import UsageProgressBar from '../components/UsageProgressBar';
+import OfflineBanner from '../components/OfflineBanner';
 import { useSubscription } from '../context/SubscriptionContext';
+import { useSyncManager } from '../hooks/useSyncManager';
+import { useNetworkStatus } from '../hooks/useNetworkStatus';
+import SyncStatusBar from '../components/SyncStatusBar';
 import { formatCurrency } from '../utils/currency';
 import { getInitialColor } from '../utils/ui';
 
@@ -33,27 +40,60 @@ const { width, height } = Dimensions.get('window');
 
 interface HomeScreenProps {
     navigation: any;
+    route?: any;
 }
 
-export default function HomeScreen({ navigation }: HomeScreenProps) {
+export default function HomeScreen({ navigation, route }: HomeScreenProps) {
     const businessId = useAppStore(state => state.businessId);
     const business = useAppStore(state => state.business);
     const language = useAppStore(state => state.language);
     const dashboardStats = useAppStore(state => state.dashboardStats);
     const computeStats = useAppStore(state => state.computeStats);
+    const queryClient = useQueryClient();
 
-    const { 
-        plan, 
-        usage, 
-        canCreateTransaction, 
-        syncSubscriptionStatus 
+    const {
+        plan,
+        usage,
+        canCreateTransaction,
+        syncSubscriptionStatus
     } = useSubscription();
-    
+
     const [showAddSheet, setShowAddSheet] = useState(false);
     const [selectedTxn, setSelectedTxn] = useState<Transaction | null>(null);
     const [showTxnDetails, setShowTxnDetails] = useState(false);
     const [showSoftBanner, setShowSoftBanner] = useState(true);
-    
+    const { pendingCount } = useSyncManager();
+    const { isOnline } = useNetworkStatus();
+
+    const [search, setSearch] = useState('');
+    const [showSearch, setShowSearch] = useState(false);
+    const searchInputRef = useRef<TextInput>(null);
+    const searchShowAnim = useRef(new Animated.Value(0)).current;
+
+    useEffect(() => {
+        if (showSearch) {
+            searchShowAnim.setValue(0);
+            Animated.timing(searchShowAnim, {
+                toValue: 1,
+                duration: 250,
+                useNativeDriver: true,
+            }).start(() => {
+                searchInputRef.current?.focus();
+            });
+        } else {
+            Animated.timing(searchShowAnim, {
+                toValue: 0,
+                duration: 200,
+                useNativeDriver: true,
+            }).start();
+        }
+    }, [showSearch]);
+
+    const searchTranslateY = searchShowAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: [-15, 0],
+    });
+
     const slideAnim = useRef(new Animated.Value(height)).current;
     const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -65,11 +105,29 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
 
     const recentTransactions: Transaction[] = txnsResponse?.data || [];
 
+    const filtered = search.trim()
+        ? recentTransactions.filter(t =>
+            t.customerName?.toLowerCase().includes(search.toLowerCase()) ||
+            t.itemName?.toLowerCase().includes(search.toLowerCase()) ||
+            t.price?.toString().includes(search)
+        )
+        : recentTransactions;
+
     useEffect(() => {
         if (recentTransactions.length >= 0) {
             computeStats(recentTransactions);
         }
     }, [recentTransactions]);
+
+    useEffect(() => {
+        if (businessId && isOnline) {
+            // Prefetch customers list to ensure they are cached and available for offline use
+            queryClient.prefetchQuery({
+                queryKey: ['customers', businessId],
+                queryFn: () => getCustomers(businessId),
+            });
+        }
+    }, [businessId, isOnline, queryClient]);
 
     useFocusEffect(
         React.useCallback(() => {
@@ -77,6 +135,92 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
             refetch();
         }, [])
     );
+
+    const handleWhatsApp = (): void => {
+        const title = language === 'hi' ? 'WhatsApp विकल्प' : 'WhatsApp Options';
+        const message = language === 'hi'
+            ? 'चुनें कि आप WhatsApp पर क्या करना चाहते हैं:'
+            : 'Select what you would like to do on WhatsApp:';
+
+        const shareInvite = async () => {
+            try {
+                const inviteMsg = language === 'hi'
+                    ? `नमस्ते! अब हम अपने हिसाब-किताब को सुरक्षित रूप से प्रबंधित करने के लिए ApnaKhata डिजिटल बहीखाता का उपयोग कर रहे हैं। अपने लेन-देन पर नज़र रखने के लिए ऐप डाउनलोड करें!`
+                    : `Hello! We are now using ApnaKhata digital ledger to manage our accounts securely. Download the app to keep track of your transactions!`;
+
+                const url = `whatsapp://send?text=${encodeURIComponent(inviteMsg)}`;
+                const canOpen = await Linking.canOpenURL(url);
+                if (canOpen) {
+                    await Linking.openURL(url);
+                } else {
+                    Alert.alert(
+                        language === 'hi' ? 'त्रुटि' : 'Error',
+                        language === 'hi' ? 'इस डिवाइस पर WhatsApp इंस्टॉल नहीं है' : 'WhatsApp is not installed on this device'
+                    );
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        };
+
+        const shareSummary = async () => {
+            try {
+                const businessName = business?.name || 'ApnaKhata';
+                const todaySales = dashboardStats.todaySales;
+                const totalUdhar = dashboardStats.totalUdhar;
+
+                const summaryMsg = language === 'hi'
+                    ? `📊 *${businessName} - व्यापार सारांश* 📊\n\n📅 आज की बिक्री: ₹${todaySales}\n📈 कुल बकाया उधार: ₹${totalUdhar}\n\n_ApnaKhata ऐप द्वारा साझा किया गया।_`
+                    : `📊 *${businessName} - Business Summary* 📊\n\n📅 Today's Sales: ₹${todaySales}\n📈 Total Outstanding Dues: ₹${totalUdhar}\n\n_Shared via ApnaKhata app._`;
+
+                const url = `whatsapp://send?text=${encodeURIComponent(summaryMsg)}`;
+                const canOpen = await Linking.canOpenURL(url);
+                if (canOpen) {
+                    await Linking.openURL(url);
+                } else {
+                    Alert.alert(
+                        language === 'hi' ? 'त्रुटि' : 'Error',
+                        language === 'hi' ? 'इस डिवाइस पर WhatsApp इंस्टॉल नहीं है' : 'WhatsApp is not installed on this device'
+                    );
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        };
+
+        const contactSupport = async () => {
+            try {
+                const supportPhone = '919999999999'; // Mock Support Phone Number
+                const supportMsg = language === 'hi'
+                    ? `नमस्ते ApnaKhata सपोर्ट! मुझे अपने डिजिटल बहीखाता ऐप के लिए मदद चाहिए।`
+                    : `Hello ApnaKhata Support! I need help with my digital ledger app.`;
+
+                const url = `whatsapp://send?phone=${supportPhone}&text=${encodeURIComponent(supportMsg)}`;
+                const canOpen = await Linking.canOpenURL(url);
+                if (canOpen) {
+                    await Linking.openURL(url);
+                } else {
+                    Alert.alert(
+                        language === 'hi' ? 'त्रुटि' : 'Error',
+                        language === 'hi' ? 'इस डिवाइस पर WhatsApp इंस्टॉल नहीं है' : 'WhatsApp is not installed on this device'
+                    );
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        };
+
+        Alert.alert(
+            title,
+            message,
+            [
+                { text: language === 'hi' ? '📲 आमंत्रण भेजें' : '📲 Share App Invite', onPress: shareInvite },
+                { text: language === 'hi' ? '📊 व्यापार सारांश' : '📊 Share Shop Summary', onPress: shareSummary },
+                { text: language === 'hi' ? '💬 सहायता टीम' : '💬 Contact Support', onPress: contactSupport },
+            ],
+            { cancelable: true }
+        );
+    };
 
     const openSheet = () => {
         setShowAddSheet(true);
@@ -112,10 +256,10 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
 
     const getTodayDate = () => {
         const today = new Date();
-        return today.toLocaleDateString(language === 'hi' ? 'hi-IN' : 'en-IN', { 
-            day: 'numeric', 
-            month: 'long', 
-            year: 'numeric' 
+        return today.toLocaleDateString(language === 'hi' ? 'hi-IN' : 'en-IN', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
         });
     };
 
@@ -160,25 +304,66 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
     return (
         <View style={styles.container}>
             <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
+            <OfflineBanner />
+            <SyncStatusBar />
 
             {/* Header */}
             <View style={styles.header}>
-                <View>
-                    <Text style={styles.greeting}>
-                        {business?.name || 'ApnaKhata'}
-                    </Text>
-                    <Text style={styles.dateText}>
-                        {business?.ownerName ? `नमस्ते, ${business.ownerName}` : getTodayDate()}
-                    </Text>
-                </View>
-                <View style={styles.headerActions}>
-                    <TouchableOpacity 
-                        onPress={() => navigation.navigate('Settings')}
-                        style={styles.iconBtn}
+                {showSearch ? (
+                    <Animated.View
+                        style={[
+                            styles.searchBarContainer,
+                            {
+                                opacity: searchShowAnim,
+                                transform: [{ translateY: searchTranslateY }]
+                            }
+                        ]}
                     >
-                        <Ionicons name="person" size={22} color={COLORS.primary} />
-                    </TouchableOpacity>
-                </View>
+                        <TextInput
+                            ref={searchInputRef}
+                            value={search}
+                            onChangeText={setSearch}
+                            placeholder={language === 'hi' ? 'लेन-देन खोजें...' : 'Search transactions...'}
+                            placeholderTextColor={COLORS.textMuted}
+                            style={styles.searchInput}
+                            autoFocus
+                        />
+                        <TouchableOpacity
+                            onPress={() => {
+                                setSearch('');
+                                setShowSearch(false);
+                            }}
+                            style={styles.closeSearchBtn}
+                        >
+                            <Ionicons name="close-outline" size={24} color={COLORS.textMuted} />
+                        </TouchableOpacity>
+                    </Animated.View>
+                ) : (
+                    <>
+                        <View style={{ flex: 1 }}>
+                            <Text style={styles.greeting}>
+                                {business?.name || 'ApnaKhata'}
+                            </Text>
+                            <Text style={styles.dateText}>
+                                {business?.ownerName ? `नमस्ते, ${business.ownerName}` : getTodayDate()}
+                            </Text>
+                        </View>
+                        <View style={styles.headerActions}>
+                            <TouchableOpacity
+                                onPress={() => setShowSearch(true)}
+                                style={styles.iconBtn}
+                            >
+                                <Ionicons name="search-outline" size={22} color={COLORS.primary} />
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                onPress={() => navigation.navigate('Settings')}
+                                style={styles.iconBtn}
+                            >
+                                <Ionicons name="person" size={22} color={COLORS.primary} />
+                            </TouchableOpacity>
+                        </View>
+                    </>
+                )}
             </View>
 
             <ScrollView
@@ -213,7 +398,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
                             <TouchableOpacity onPress={() => navigation.navigate('Subscription')} style={{ marginRight: 12 }}>
                                 <Text style={{ color: '#F5A623', fontWeight: '800', fontSize: 13 }}>Upgrade →</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity onPress={() => setShowSoftBanner(false)} hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}>
+                            <TouchableOpacity onPress={() => setShowSoftBanner(false)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
                                 <Ionicons name="close" size={18} color="#1A3C6E" />
                             </TouchableOpacity>
                         </View>
@@ -234,9 +419,9 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
                                 <Ionicons name="chevron-forward-circle" size={28} color="rgba(255,255,255,0.4)" />
                             </TouchableOpacity>
                         </View>
-                        
+
                         <View style={styles.divider} />
-                        
+
                         <View style={styles.summaryBottom}>
                             <View style={styles.statBox}>
                                 <Text style={styles.statLabel}>दिया उधार</Text>
@@ -263,13 +448,13 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
                 {/* Quick Actions */}
                 <View style={styles.actionsGrid}>
                     {[
-                        { 
-                            id: 'give', 
-                            icon: 'add-circle', 
-                            label: 'उधार दें', 
-                            color: COLORS.danger, 
+                        {
+                            id: 'give',
+                            icon: 'add-circle',
+                            label: 'उधार दें',
+                            color: COLORS.danger,
                             action: () => {
-                                if (!canCreateTransaction()) {
+                                if (isOnline && !canCreateTransaction()) {
                                     Alert.alert(
                                         'Limit Reached',
                                         'You have reached your monthly transaction limit. Please upgrade to continue.',
@@ -315,6 +500,15 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
                     <View style={styles.loadingContainer}>
                         <ActivityIndicator size="large" color={COLORS.primary} />
                     </View>
+                ) : filtered.length === 0 && search.trim() ? (
+                    <View style={styles.emptyContainer}>
+                        <Ionicons name="search-outline" size={48} color={COLORS.textMuted} />
+                        <Text style={styles.emptyTitle}>
+                            {language === 'hi'
+                                ? `'${search}' के लिए कोई लेन-देन नहीं मिला`
+                                : `No transactions found for '${search}'`}
+                        </Text>
+                    </View>
                 ) : recentTransactions.length === 0 ? (
                     <View style={styles.emptyContainer}>
                         <Ionicons name="document-text-outline" size={64} color="#E9ECEF" />
@@ -328,7 +522,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
                                 <Text style={styles.seeAll}>See All →</Text>
                             </TouchableOpacity>
                         </View>
-                        {recentTransactions.slice(0, 8).map(txn => (
+                        {filtered.slice(0, 8).map(txn => (
                             <View key={txn.id}>{renderTransactionItem({ item: txn })}</View>
                         ))}
                     </View>
@@ -338,7 +532,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
             {/* Main FAB */}
             <TouchableOpacity
                 onPress={() => {
-                    if (!canCreateTransaction()) {
+                    if (isOnline && !canCreateTransaction()) {
                         Alert.alert(
                             'Limit Reached',
                             'You have reached your monthly transaction limit. Please upgrade to continue.',
@@ -352,6 +546,13 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
                 style={styles.fab}
             >
                 <Ionicons name="add" size={32} color="#FFFFFF" />
+                {pendingCount > 0 && (
+                    <View style={styles.fabBadge}>
+                        <Text style={styles.fabBadgeText}>
+                            {pendingCount > 9 ? '9+' : pendingCount}
+                        </Text>
+                    </View>
+                )}
             </TouchableOpacity>
 
             {/* Enhanced Add Transaction Sheet */}
@@ -360,10 +561,10 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
                     <Animated.View style={[styles.overlayFade, { opacity: fadeAnim }]}>
                         <TouchableOpacity activeOpacity={1} style={{ flex: 1 }} onPress={closeSheet} />
                     </Animated.View>
-                    
+
                     <Animated.View style={[styles.sheetContainer, { transform: [{ translateY: slideAnim }] }]}>
                         <View style={styles.sheetHandle} />
-                        
+
                         <View style={styles.sheetHeader}>
                             <Text style={styles.sheetTitle}>Add Transaction</Text>
                             <TouchableOpacity onPress={closeSheet} style={styles.closeBtn}>
@@ -373,7 +574,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
 
                         {/* Primary Quick Methods */}
                         <View style={styles.methodGrid}>
-                            <TouchableOpacity 
+                            <TouchableOpacity
                                 style={[styles.methodCard, { backgroundColor: '#F0FDF4' }]}
                                 onPress={() => { closeSheet(); navigation.navigate('VoiceInput'); }}
                             >
@@ -384,7 +585,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
                                 <Text style={styles.methodSub}>Fastest Way</Text>
                             </TouchableOpacity>
 
-                            <TouchableOpacity 
+                            <TouchableOpacity
                                 style={[styles.methodCard, { backgroundColor: '#FFF7ED' }]}
                                 onPress={() => { closeSheet(); navigation.navigate('CameraScan'); }}
                             >
@@ -405,7 +606,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
                                 <Text style={styles.secLabel}>Manual</Text>
                             </TouchableOpacity>
 
-                            <TouchableOpacity style={styles.secAction} onPress={() => { closeSheet(); Alert.alert("Coming Soon", "WhatsApp integration is in progress!"); }}>
+                            <TouchableOpacity style={styles.secAction} onPress={() => { closeSheet(); handleWhatsApp(); }}>
                                 <View style={styles.secIconBg}>
                                     <Ionicons name="logo-whatsapp" size={24} color="#25D366" />
                                 </View>
@@ -419,7 +620,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
                                 <Text style={styles.secLabel}>Pay Udhar</Text>
                             </TouchableOpacity>
                         </View>
-                        
+
                         <View style={{ height: Platform.OS === 'ios' ? 40 : 20 }} />
                     </Animated.View>
                 </View>
@@ -437,6 +638,29 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
+    },
+    searchBarContainer: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#FFFFFF',
+        borderRadius: 14,
+        paddingHorizontal: 16,
+        height: 44,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+        elevation: 2,
+    },
+    searchInput: {
+        flex: 1,
+        fontSize: 16,
+        color: COLORS.text,
+        paddingVertical: Platform.OS === 'ios' ? 8 : 4,
+    },
+    closeSearchBtn: {
+        padding: 4,
     },
     greeting: { fontSize: 22, fontWeight: '800', color: COLORS.text, letterSpacing: -0.5 },
     dateText: { fontSize: 13, color: COLORS.textMuted, marginTop: 4, fontWeight: '500' },
@@ -507,12 +731,12 @@ const styles = StyleSheet.create({
     },
     actionLabel: { fontSize: 12, fontWeight: '700', color: COLORS.text },
     usageContainer: { paddingHorizontal: 20, marginBottom: 24 },
-    sectionHeader: { 
-        flexDirection: 'row', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
-        paddingHorizontal: 24, 
-        marginBottom: 16 
+    sectionHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 24,
+        marginBottom: 16
     },
     sectionTitle: { fontSize: 17, fontWeight: '800', color: COLORS.text },
     seeAll: { fontSize: 13, color: COLORS.primary, fontWeight: '700' },
@@ -588,4 +812,22 @@ const styles = StyleSheet.create({
         marginBottom: 8,
     },
     secLabel: { fontSize: 13, fontWeight: '700', color: COLORS.text },
+    fabBadge: {
+        position: 'absolute',
+        top: -4,
+        right: -4,
+        width: 18,
+        height: 18,
+        borderRadius: 9,
+        backgroundColor: '#F97316',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1.5,
+        borderColor: '#FFFFFF',
+    },
+    fabBadgeText: {
+        color: '#FFFFFF',
+        fontSize: 10,
+        fontWeight: '800',
+    },
 });

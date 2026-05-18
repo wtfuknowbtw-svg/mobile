@@ -1,4 +1,4 @@
-import { Linking } from 'react-native';
+import { Linking, Alert } from 'react-native';
 
 /**
  * WhatsApp payment reminder helper functions
@@ -37,13 +37,34 @@ export function openWhatsAppReminder(phone: string, customerName: string, busine
   
   const encodedMessage = encodeURIComponent(message);
   const whatsappUrl = `whatsapp://send?phone=91${phone}&text=${encodedMessage}`;
-  
-  Linking.openURL(whatsappUrl).catch((error: any) => {
-    console.error('WhatsApp not available, falling back to SMS:', error);
-    // Fallback to SMS if WhatsApp is not available
-    const smsUrl = `sms:${phone}?body=${encodedMessage}`;
+  const smsUrl = `sms:+91${phone}?body=${encodedMessage}`;
+
+  const handleSmsFallback = () => {
     Linking.openURL(smsUrl).catch((smsError: any) => {
       console.error('SMS also failed:', smsError);
+      Alert.alert(
+        language === 'hi' ? 'त्रुटि' : 'Error',
+        language === 'hi'
+          ? 'WhatsApp या SMS नहीं खुला। कृपया जांचें कि ऐप इंस्टॉल है।'
+          : 'Could not open WhatsApp or SMS. Please check if the app is installed.'
+      );
     });
-  });
+  };
+
+  Linking.canOpenURL('whatsapp://send')
+    .then((supported) => {
+      if (supported) {
+        Linking.openURL(whatsappUrl).catch((error: any) => {
+          console.error('WhatsApp failed to open:', error);
+          handleSmsFallback();
+        });
+      } else {
+        handleSmsFallback();
+      }
+    })
+    .catch((err) => {
+      console.error('canOpenURL failed:', err);
+      handleSmsFallback();
+    });
 }
+
