@@ -283,7 +283,7 @@ export function usePlan() {
 function getPlanFeatures(plan: 'free' | 'pro' | 'business'): PlanFeatures {
   const features = {
     free: {
-      aiFeatures: false,
+      aiFeatures: true,
       multipleStaff: false,
       unlimitedTransactions: false,
       unlimitedCustomers: false,

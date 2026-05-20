@@ -105,12 +105,43 @@ export default function HomeScreen({ navigation, route }: HomeScreenProps) {
 
     const recentTransactions: Transaction[] = txnsResponse?.data || [];
 
+    const { data: customersResponse } = useQuery({
+        queryKey: ['customers', businessId],
+        queryFn: () => getCustomers(businessId || undefined),
+        enabled: !!businessId,
+    });
+    const customers = customersResponse?.data || [];
+
+    const customerMap = React.useMemo(() => {
+        const map: Record<string, string> = {};
+        customers.forEach(c => {
+            if (c.id && c.name) {
+                map[c.id] = c.name;
+            }
+        });
+        return map;
+    }, [customers]);
+
+    const getTxnCustomerName = React.useCallback((t: Transaction) => {
+        if (t.customerName && t.customerName !== 'Unknown Customer' && t.customerName !== 'Cash Entry') {
+            return t.customerName;
+        }
+        if (t.customerId && customerMap[t.customerId]) {
+            return customerMap[t.customerId];
+        }
+        return t.customerName || 'Unknown Customer';
+    }, [customerMap]);
+
     const filtered = search.trim()
-        ? recentTransactions.filter(t =>
-            t.customerName?.toLowerCase().includes(search.toLowerCase()) ||
-            t.itemName?.toLowerCase().includes(search.toLowerCase()) ||
-            t.price?.toString().includes(search)
-        )
+        ? recentTransactions.filter(t => {
+            const searchLower = search.trim().toLowerCase();
+            const customerName = getTxnCustomerName(t);
+            const customerMatch = customerName ? customerName.toLowerCase().includes(searchLower) : false;
+            const itemMatch = t.itemName ? t.itemName.toLowerCase().includes(searchLower) : false;
+            const phoneMatch = t.customerPhone ? t.customerPhone.includes(searchLower) : false;
+            const priceMatch = t.price !== undefined && t.price !== null ? t.price.toString().includes(search) : false;
+            return customerMatch || itemMatch || phoneMatch || priceMatch;
+        })
         : recentTransactions;
 
     useEffect(() => {
@@ -265,6 +296,7 @@ export default function HomeScreen({ navigation, route }: HomeScreenProps) {
 
     const renderTransactionItem = ({ item }: { item: Transaction }) => {
         const isCredit = item.type === 'credit';
+        const displayName = getTxnCustomerName(item);
         return (
             <TouchableOpacity
                 onPress={() => {
@@ -274,15 +306,15 @@ export default function HomeScreen({ navigation, route }: HomeScreenProps) {
                 activeOpacity={0.7}
                 style={styles.txnItem}
             >
-                <View style={[styles.avatar, { backgroundColor: getInitialColor(item.customerName || 'Unknown') }]}>
+                <View style={[styles.avatar, { backgroundColor: getInitialColor(displayName || 'Unknown') }]}>
                     <Text style={styles.avatarText}>
-                        {(item.customerName || 'U').charAt(0).toUpperCase()}
+                        {(displayName || 'U').charAt(0).toUpperCase()}
                     </Text>
                 </View>
 
                 <View style={{ flex: 1 }}>
                     <Text style={styles.txnName} numberOfLines={1}>
-                        {item.customerName || 'Unknown Customer'}
+                        {displayName}
                     </Text>
                     <Text style={styles.txnItemName} numberOfLines={1}>
                         {item.itemName || 'No description'}

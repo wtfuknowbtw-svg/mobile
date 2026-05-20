@@ -192,7 +192,8 @@ export default function CameraScanScreen({ navigation }: CameraScanScreenProps) 
     const handleCapture = async () => {
         if (!cameraRef || isProcessing) return;
 
-        // Check AI features access
+        // Check AI features access (Bypassed for testing)
+        /*
         if (!hasAIFeatures()) {
             Alert.alert(
                 'AI Features Required',
@@ -210,6 +211,7 @@ export default function CameraScanScreen({ navigation }: CameraScanScreenProps) 
             );
             return;
         }
+        */
 
         try {
             console.log('Taking picture...');
