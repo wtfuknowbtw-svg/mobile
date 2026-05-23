@@ -498,6 +498,7 @@ export default function HomeScreen({ navigation, route }: HomeScreenProps) {
                             }
                         },
                         { id: 'take', icon: 'checkmark-circle', label: 'पेमेंट लें', color: COLORS.success, action: () => navigation.navigate('UdharPayment') },
+                        { id: 'purchase', icon: 'cart', label: 'खरीद', color: COLORS.secondary, action: () => navigation.navigate('Purchases') },
                         { id: 'customers', icon: 'people', label: 'ग्राहक', color: COLORS.primary, action: () => navigation.navigate('Customers') },
                         { id: 'reports', icon: 'bar-chart', label: 'रिपोर्ट', color: COLORS.gold, action: () => navigation.navigate('Reports') },
                     ].map(item => (

@@ -28,6 +28,9 @@ import BusinessProfileScreen from '../screens/BusinessProfileScreen';
 import SubscriptionScreen from '../screens/SubscriptionScreen';
 import UpgradeScreen from '../screens/UpgradeScreen';
 import NotificationSettingsScreen from '../screens/NotificationSettingsScreen';
+import PurchasesScreen from '../screens/PurchasesScreen';
+import AddPurchaseScreen from '../screens/AddPurchaseScreen';
+import PurchaseSummaryScreen from '../screens/PurchaseSummaryScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const MainTab = createBottomTabNavigator<MainTabParamList>();
@@ -192,6 +195,23 @@ export default function AppNavigator() {
                     options={{ animation: 'slide_from_bottom' }}
                 />
                 <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} />
+
+                {/* Purchase Screens */}
+                <Stack.Screen
+                    name="Purchases"
+                    component={PurchasesScreen}
+                    options={{ animation: 'slide_from_right' }}
+                />
+                <Stack.Screen
+                    name="AddPurchase"
+                    component={AddPurchaseScreen}
+                    options={{ animation: 'slide_from_bottom' }}
+                />
+                <Stack.Screen
+                    name="PurchaseSummary"
+                    component={PurchaseSummaryScreen}
+                    options={{ animation: 'slide_from_right' }}
+                />
             </Stack.Navigator>
         </NavigationContainer>
     );

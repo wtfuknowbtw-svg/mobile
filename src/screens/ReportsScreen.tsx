@@ -17,6 +17,7 @@ import { COLORS } from '../constants';
 import { useAppStore } from '../store/useAppStore';
 import { useQuery } from '@tanstack/react-query';
 import { getTransactions } from '../api/transactions';
+import { getPurchasesSummary } from '../api/purchases';
 import type { Transaction } from '../types';
 import i18n from '../i18n';
 import { useSubscription } from '../context/SubscriptionContext';
@@ -50,6 +51,12 @@ export default function ReportsScreen({ navigation }: ReportsScreenProps) {
     });
 
     const transactions: Transaction[] = txnsResponse?.data || [];
+
+    const { data: purchaseSummary } = useQuery({
+        queryKey: ['purchasesSummary', businessId, 'month'],
+        queryFn: () => getPurchasesSummary('month'),
+        enabled: !!businessId,
+    });
 
     // Date calculations
     const now = new Date();
@@ -316,6 +323,30 @@ export default function ReportsScreen({ navigation }: ReportsScreenProps) {
                         <Text style={[styles.summaryAmount, { color: COLORS.primary }]}>{formatCurrency(stats.outstanding)}</Text>
                     </View>
                 </View>
+
+                {/* Purchase Summary Section */}
+                <View style={styles.sectionHeader}>
+                    <Text style={styles.sectionTitle}>{language === 'hi' ? 'खरीद सारांश' : 'Purchase Summary'}</Text>
+                </View>
+                <TouchableOpacity
+                    style={styles.purchaseSummaryCard}
+                    onPress={() => navigation.navigate('PurchaseSummary')}
+                >
+                    <View style={styles.purchaseSummaryLeft}>
+                        <Ionicons name="cart-outline" size={24} color={COLORS.secondary} />
+                        <Text style={styles.purchaseSummaryLabel}>{language === 'hi' ? 'इस महीने खरीदा' : 'Bought this month'}</Text>
+                        <Text style={styles.purchaseSummaryAmount}>
+                            ₹{purchaseSummary?.data?.totalPurchaseCost?.toFixed(2) || '0'}
+                        </Text>
+                    </View>
+                    <View style={styles.purchaseSummaryRight}>
+                        <Text style={styles.purchaseSummaryRightLabel}>{language === 'hi' ? 'बिका' : 'Sold'}</Text>
+                        <Text style={styles.purchaseSummaryRightAmount}>
+                            ₹{purchaseSummary?.data?.totalSalesRevenue?.toFixed(2) || '0'}
+                        </Text>
+                        <Ionicons name="chevron-forward" size={20} color={COLORS.textMuted} />
+                    </View>
+                </TouchableOpacity>
 
                 {/* Chart Section */}
                 <View style={styles.sectionHeader}>
@@ -603,4 +634,46 @@ const styles = StyleSheet.create({
     activeMonthBtnText: { color: '#FFFFFF' },
     yearSelector: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 30, marginTop: 20, paddingVertical: 10 },
     yearText: { fontSize: 22, fontWeight: '800', color: COLORS.primary },
+    purchaseSummaryCard: {
+        flexDirection: 'row',
+        backgroundColor: '#FFFFFF',
+        borderRadius: 16,
+        padding: 16,
+        marginBottom: 32,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.08,
+        shadowRadius: 12,
+        elevation: 4,
+    },
+    purchaseSummaryLeft: {
+        flex: 1,
+        alignItems: 'flex-start',
+    },
+    purchaseSummaryLabel: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: COLORS.textMuted,
+        marginTop: 8,
+    },
+    purchaseSummaryAmount: {
+        fontSize: 20,
+        fontWeight: '800',
+        color: COLORS.secondary,
+        marginTop: 4,
+    },
+    purchaseSummaryRight: {
+        alignItems: 'flex-end',
+        gap: 4,
+    },
+    purchaseSummaryRightLabel: {
+        fontSize: 12,
+        fontWeight: '600',
+        color: COLORS.textMuted,
+    },
+    purchaseSummaryRightAmount: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: COLORS.success,
+    },
 });

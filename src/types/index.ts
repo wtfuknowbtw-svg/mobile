@@ -88,6 +88,9 @@ export type RootStackParamList = {
     Subscription: undefined;
     Upgrade: undefined;
     NotificationSettings: undefined;
+    Purchases: undefined;
+    AddPurchase: undefined;
+    PurchaseSummary: undefined;
 };
 
 export type MainTabParamList = {
