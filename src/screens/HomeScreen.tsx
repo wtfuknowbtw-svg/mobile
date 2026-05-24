@@ -478,7 +478,11 @@ export default function HomeScreen({ navigation, route }: HomeScreenProps) {
                 </View>
 
                 {/* Quick Actions */}
-                <View style={styles.actionsGrid}>
+                <ScrollView 
+                  horizontal 
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.actionsGrid}
+                >
                     {[
                         {
                             id: 'give',
@@ -509,7 +513,7 @@ export default function HomeScreen({ navigation, route }: HomeScreenProps) {
                             <Text style={styles.actionLabel}>{item.label}</Text>
                         </TouchableOpacity>
                     ))}
-                </View>
+                </ScrollView>
 
                 {/* Usage for Free */}
                 {plan === 'free' && (
@@ -744,8 +748,13 @@ const styles = StyleSheet.create({
     statRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     statValueGiven: { fontSize: 18, fontWeight: '800', color: '#FECACA' },
     statValueReceived: { fontSize: 18, fontWeight: '800', color: '#A7F3D0' },
-    actionsGrid: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 20, marginBottom: 28 },
-    actionItem: { alignItems: 'center', width: (width - 40) / 4 },
+    actionsGrid: {
+        flexDirection: 'row',
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        gap: 12,
+    },
+    actionItem: { alignItems: 'center', width: 72 },
     actionIconBg: {
         width: 64,
         height: 64,

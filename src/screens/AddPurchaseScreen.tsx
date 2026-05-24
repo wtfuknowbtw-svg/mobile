@@ -88,34 +88,18 @@ export default function AddPurchaseScreen({ navigation }: any) {
 
   const text = {
     title: language === 'hi' ? 'नई खरीद' : 'New Purchase',
-    supplierName: language === 'hi' ? '🏪 सप्लायर नाम (वैकल्पिक)' : '🏪 Supplier Name (optional)',
+    supplierName: language === 'hi' ? 'सप्लायर नाम (वैकल्पिक)' : 'Supplier Name (optional)',
     supplierPlaceholder: language === 'hi' ? 'जैसे: Sharma Wholesale' : 'e.g. Sharma Wholesale',
-    itemName: language === 'hi' ? '📦 आइटम नाम (आवश्यक)' : '📦 Item Name (required)',
+    itemName: language === 'hi' ? 'आइटम नाम (आवश्यक)' : 'Item Name (required)',
     itemPlaceholder: language === 'hi' ? 'जैसे: Basmati Rice' : 'e.g. Basmati Rice',
-    quantity: language === 'hi' ? '⚖️ मात्रा' : '⚖️ Quantity',
-    costPrice: language === 'hi' ? '💰 प्रति यूनिट कीमत' : '💰 Cost per unit',
-    totalCost: language === 'hi' ? '💵 कुल लागत' : '💵 Total Cost',
-    date: language === 'hi' ? '📅 तारीख' : '📅 Date',
-    notes: language === 'hi' ? '📝 नोट्स (वैकल्पिक)' : '📝 Notes (optional)',
+    quantity: language === 'hi' ? 'मात्रा' : 'Quantity',
+    costPrice: language === 'hi' ? 'प्रति यूनिट कीमत' : 'Cost per unit',
+    totalCost: language === 'hi' ? 'कुल लागत' : 'Total Cost',
+    date: language === 'hi' ? 'तारीख' : 'Date',
+    notes: language === 'hi' ? 'नोट्स (वैकल्पिक)' : 'Notes (optional)',
     totalCostLabel: language === 'hi' ? 'कुल लागत: ₹' : 'Total Cost: ₹',
     save: language === 'hi' ? 'सेव करें' : 'Save',
   };
-
-  const renderUnitPicker = () => (
-    <View style={styles.unitPicker}>
-      {units.map((u) => (
-        <TouchableOpacity
-          key={u}
-          style={[styles.unitOption, unit === u && styles.unitOptionActive]}
-          onPress={() => setUnit(u)}
-        >
-          <Text style={[styles.unitOptionText, unit === u && styles.unitOptionTextActive]}>
-            {u}
-          </Text>
-        </TouchableOpacity>
-      ))}
-    </View>
-  );
 
   return (
     <KeyboardAvoidingView
@@ -133,7 +117,10 @@ export default function AddPurchaseScreen({ navigation }: any) {
       <ScrollView style={styles.scrollView}>
         {/* Supplier Name */}
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>{text.supplierName}</Text>
+          <View style={styles.labelRow}>
+            <Ionicons name="storefront-outline" size={16} color={COLORS.primary} style={styles.labelIcon} />
+            <Text style={styles.label}>{text.supplierName}</Text>
+          </View>
           <TextInput
             style={styles.input}
             placeholder={text.supplierPlaceholder}
@@ -145,7 +132,10 @@ export default function AddPurchaseScreen({ navigation }: any) {
 
         {/* Item Name */}
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>{text.itemName}</Text>
+          <View style={styles.labelRow}>
+            <Ionicons name="cube-outline" size={16} color={COLORS.primary} style={styles.labelIcon} />
+            <Text style={styles.label}>{text.itemName}</Text>
+          </View>
           <TextInput
             style={styles.input}
             placeholder={text.itemPlaceholder}
@@ -157,23 +147,56 @@ export default function AddPurchaseScreen({ navigation }: any) {
 
         {/* Quantity + Unit */}
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>{text.quantity}</Text>
-          <View style={styles.row}>
+          <View style={styles.labelRow}>
+            <Ionicons name="scale-outline" size={16} color={COLORS.primary} style={styles.labelIcon} />
+            <Text style={styles.label}>{text.quantity}</Text>
+          </View>
+          <View style={styles.quantityInputRow}>
             <TextInput
-              style={[styles.input, styles.flexInput]}
+              style={[styles.input, styles.quantityInput, { flex: 1 }]}
               placeholder="0"
               placeholderTextColor={COLORS.textMuted}
               value={quantity}
               onChangeText={setQuantity}
               keyboardType="decimal-pad"
             />
-            {renderUnitPicker()}
+            {unit ? (
+              <View style={styles.unitSuffixContainer}>
+                <Text style={styles.unitSuffixText}>{unit}</Text>
+              </View>
+            ) : null}
           </View>
+          
+          <Text style={styles.quantityPreviewText}>
+            {quantity || '0'} {unit}
+          </Text>
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.unitPickerScroll}
+            contentContainerStyle={styles.unitPickerContent}
+          >
+            {units.map((u) => (
+              <TouchableOpacity
+                key={u}
+                style={[styles.unitChip, unit === u ? styles.unitChipSelected : styles.unitChipUnselected]}
+                onPress={() => setUnit(u)}
+              >
+                <Text style={[styles.unitChipText, unit === u ? styles.unitChipTextSelected : styles.unitChipTextUnselected]}>
+                  {u}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
         </View>
 
         {/* Cost Price */}
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>{text.costPrice}</Text>
+          <View style={styles.labelRow}>
+            <Ionicons name="cash-outline" size={16} color={COLORS.primary} style={styles.labelIcon} />
+            <Text style={styles.label}>{text.costPrice}</Text>
+          </View>
           <TextInput
             style={styles.input}
             placeholder="0.00"
@@ -186,7 +209,10 @@ export default function AddPurchaseScreen({ navigation }: any) {
 
         {/* Total Cost */}
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>{text.totalCost}</Text>
+          <View style={styles.labelRow}>
+            <Ionicons name="wallet-outline" size={16} color={COLORS.primary} style={styles.labelIcon} />
+            <Text style={styles.label}>{text.totalCost}</Text>
+          </View>
           <TextInput
             style={styles.input}
             placeholder="0.00"
@@ -199,7 +225,10 @@ export default function AddPurchaseScreen({ navigation }: any) {
 
         {/* Date */}
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>{text.date}</Text>
+          <View style={styles.labelRow}>
+            <Ionicons name="calendar-outline" size={16} color={COLORS.primary} style={styles.labelIcon} />
+            <Text style={styles.label}>{text.date}</Text>
+          </View>
           <TextInput
             style={styles.input}
             value={date}
@@ -211,7 +240,10 @@ export default function AddPurchaseScreen({ navigation }: any) {
 
         {/* Notes */}
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>{text.notes}</Text>
+          <View style={styles.labelRow}>
+            <Ionicons name="document-text-outline" size={16} color={COLORS.primary} style={styles.labelIcon} />
+            <Text style={styles.label}>{text.notes}</Text>
+          </View>
           <TextInput
             style={[styles.input, styles.textArea]}
             placeholder={language === 'hi' ? 'वैकल्पिक नोट्स' : 'Optional notes'}
@@ -273,11 +305,18 @@ const styles = StyleSheet.create({
   inputGroup: {
     marginBottom: 20,
   },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  labelIcon: {
+    marginRight: 6,
+  },
   label: {
     fontSize: 14,
     fontWeight: '600',
     color: COLORS.text,
-    marginBottom: 8,
   },
   input: {
     backgroundColor: COLORS.card,
@@ -289,41 +328,70 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
   },
-  textArea: {
-    height: 80,
-    textAlignVertical: 'top',
-  },
-  row: {
+  quantityInputRow: {
     flexDirection: 'row',
-    gap: 12,
+    alignItems: 'center',
+    position: 'relative',
   },
-  flexInput: {
-    flex: 1,
+  quantityInput: {
+    height: 56,
+    fontSize: 18,
+    paddingRight: 60,
   },
-  unitPicker: {
-    flexDirection: 'row',
-    gap: 8,
-    flexWrap: 'wrap',
+  unitSuffixContainer: {
+    position: 'absolute',
+    right: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  unitOption: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    backgroundColor: COLORS.background,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+  unitSuffixText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1A3C6E',
   },
-  unitOptionActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  unitOptionText: {
+  quantityPreviewText: {
     fontSize: 14,
     fontWeight: '600',
     color: COLORS.textMuted,
+    marginTop: 6,
+    marginBottom: 12,
   },
-  unitOptionTextActive: {
-    color: COLORS.white,
+  unitPickerScroll: {
+    marginTop: 4,
+  },
+  unitPickerContent: {
+    paddingVertical: 4,
+    gap: 8,
+  },
+  unitChip: {
+    borderRadius: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  unitChipSelected: {
+    backgroundColor: '#1A3C6E',
+  },
+  unitChipUnselected: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+  },
+  unitChipText: {
+    fontWeight: '600',
+  },
+  unitChipTextSelected: {
+    color: '#FFFFFF',
+    fontSize: 16,
+  },
+  unitChipTextUnselected: {
+    color: '#6B7280',
+    fontSize: 14,
+  },
+  textArea: {
+    height: 80,
+    textAlignVertical: 'top',
   },
   totalCostDisplay: {
     backgroundColor: COLORS.primaryLight,
