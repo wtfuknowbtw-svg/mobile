@@ -502,7 +502,6 @@ export default function HomeScreen({ navigation, route }: HomeScreenProps) {
                             }
                         },
                         { id: 'take', icon: 'checkmark-circle', label: 'पेमेंट लें', color: COLORS.success, action: () => navigation.navigate('UdharPayment') },
-                        { id: 'purchase', icon: 'cart', label: 'खरीद', color: COLORS.secondary, action: () => navigation.navigate('Purchases') },
                         { id: 'customers', icon: 'people', label: 'ग्राहक', color: COLORS.primary, action: () => navigation.navigate('Customers') },
                         { id: 'reports', icon: 'bar-chart', label: 'रिपोर्ट', color: COLORS.gold, action: () => navigation.navigate('Reports') },
                     ].map(item => (
@@ -643,11 +642,12 @@ export default function HomeScreen({ navigation, route }: HomeScreenProps) {
                                 <Text style={styles.secLabel}>Manual</Text>
                             </TouchableOpacity>
 
-                            <TouchableOpacity style={styles.secAction} onPress={() => { closeSheet(); handleWhatsApp(); }}>
-                                <View style={styles.secIconBg}>
-                                    <Ionicons name="logo-whatsapp" size={24} color="#25D366" />
+                            <TouchableOpacity style={styles.secAction} onPress={() => { closeSheet(); navigation.navigate('AddPurchase'); }}>
+                                <View style={[styles.secIconBg, { backgroundColor: '#FFF7ED' }]}>
+                                    <Ionicons name="cart-outline" size={24} color="#F5A623" />
                                 </View>
-                                <Text style={styles.secLabel}>WhatsApp</Text>
+                                <Text style={styles.secLabel}>{language === 'hi' ? 'खरीद' : 'Purchase'}</Text>
+                                <Text style={styles.secSub}>{language === 'hi' ? 'स्टॉक रिकॉर्ड' : 'Stock Record'}</Text>
                             </TouchableOpacity>
 
                             <TouchableOpacity style={styles.secAction} onPress={() => { closeSheet(); navigation.navigate('UdharPayment'); }}>
@@ -854,6 +854,7 @@ const styles = StyleSheet.create({
         marginBottom: 8,
     },
     secLabel: { fontSize: 13, fontWeight: '700', color: COLORS.text },
+    secSub: { fontSize: 10, color: COLORS.textMuted, marginTop: 2, textAlign: 'center' },
     fabBadge: {
         position: 'absolute',
         top: -4,
