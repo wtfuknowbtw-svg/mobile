@@ -73,6 +73,13 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
             subtitle: 'View detailed reports',
             action: () => navigation.navigate('Reports'),
         },
+        {
+            icon: 'options-outline',
+            iconColor: COLORS.primary,
+            label: language === 'hi' ? 'यूनिट कन्वर्शन' : 'Unit Conversions',
+            subtitle: language === 'hi' ? 'बताएं 1 बैग = कितना kg?' : 'Define 1 bag = how many kg',
+            action: () => navigation.navigate('UnitConversions'),
+        },
     ];
 
     const preferencesMenuItems = [

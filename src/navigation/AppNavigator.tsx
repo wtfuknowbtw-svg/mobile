@@ -31,6 +31,7 @@ import NotificationSettingsScreen from '../screens/NotificationSettingsScreen';
 import PurchasesScreen from '../screens/PurchasesScreen';
 import AddPurchaseScreen from '../screens/AddPurchaseScreen';
 import PurchaseSummaryScreen from '../screens/PurchaseSummaryScreen';
+import UnitConversionsScreen from '../screens/UnitConversionsScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const MainTab = createBottomTabNavigator<MainTabParamList>();
@@ -210,6 +211,11 @@ export default function AppNavigator() {
                 <Stack.Screen
                     name="PurchaseSummary"
                     component={PurchaseSummaryScreen}
+                    options={{ animation: 'slide_from_right' }}
+                />
+                <Stack.Screen
+                    name="UnitConversions"
+                    component={UnitConversionsScreen}
                     options={{ animation: 'slide_from_right' }}
                 />
             </Stack.Navigator>

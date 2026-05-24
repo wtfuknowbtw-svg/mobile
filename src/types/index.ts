@@ -91,6 +91,7 @@ export type RootStackParamList = {
     Purchases: undefined;
     AddPurchase: undefined;
     PurchaseSummary: undefined;
+    UnitConversions: undefined;
 };
 
 export type MainTabParamList = {

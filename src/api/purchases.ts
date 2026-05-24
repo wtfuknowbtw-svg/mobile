@@ -26,6 +26,27 @@ export interface PurchaseSummary {
     difference: number;
     unit: string;
   }[];
+  itemWiseTracking?: {
+    itemName: string;
+    purchased: {
+      quantity: number;
+      unit: string;
+      cost: number;
+      convertedQuantity: number;
+      convertedUnit: string;
+    };
+    sold: {
+      quantity: number;
+      unit: string;
+      revenue: number;
+    };
+    remaining: number;
+    remainingUnit: string;
+    isMissing: boolean;
+    missingQuantity: number;
+    unitMismatch: boolean;
+    conversionUsed: string;
+  }[];
 }
 
 export const getPurchases = async (filter: string = 'all'): Promise<{ data?: Purchase[]; summary?: any; error?: string }> => {
