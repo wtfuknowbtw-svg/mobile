@@ -17,7 +17,6 @@ import { COLORS } from '../constants';
 import { useAppStore } from '../store/useAppStore';
 import { useQuery } from '@tanstack/react-query';
 import { getTransactions } from '../api/transactions';
-import { getPurchasesSummary } from '../api/purchases';
 import type { Transaction } from '../types';
 import i18n from '../i18n';
 import { useSubscription } from '../context/SubscriptionContext';
@@ -52,11 +51,7 @@ export default function ReportsScreen({ navigation }: ReportsScreenProps) {
 
     const transactions: Transaction[] = txnsResponse?.data || [];
 
-    const { data: purchaseSummary } = useQuery({
-        queryKey: ['purchasesSummary', businessId, 'month'],
-        queryFn: () => getPurchasesSummary('month'),
-        enabled: !!businessId,
-    });
+
 
     // Date calculations
     const now = new Date();
@@ -324,29 +319,7 @@ export default function ReportsScreen({ navigation }: ReportsScreenProps) {
                     </View>
                 </View>
 
-                {/* Purchase Summary Section */}
-                <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionTitle}>{language === 'hi' ? 'खरीद सारांश' : 'Purchase Summary'}</Text>
-                </View>
-                <TouchableOpacity
-                    style={styles.purchaseSummaryCard}
-                    onPress={() => navigation.navigate('PurchaseSummary')}
-                >
-                    <View style={styles.purchaseSummaryLeft}>
-                        <Ionicons name="cart-outline" size={24} color={COLORS.secondary} />
-                        <Text style={styles.purchaseSummaryLabel}>{language === 'hi' ? 'इस महीने खरीदा' : 'Bought this month'}</Text>
-                        <Text style={styles.purchaseSummaryAmount}>
-                            ₹{purchaseSummary?.data?.totalPurchaseCost?.toFixed(2) || '0'}
-                        </Text>
-                    </View>
-                    <View style={styles.purchaseSummaryRight}>
-                        <Text style={styles.purchaseSummaryRightLabel}>{language === 'hi' ? 'बिका' : 'Sold'}</Text>
-                        <Text style={styles.purchaseSummaryRightAmount}>
-                            ₹{purchaseSummary?.data?.totalSalesRevenue?.toFixed(2) || '0'}
-                        </Text>
-                        <Ionicons name="chevron-forward" size={20} color={COLORS.textMuted} />
-                    </View>
-                </TouchableOpacity>
+
 
                 {/* Chart Section */}
                 <View style={styles.sectionHeader}>

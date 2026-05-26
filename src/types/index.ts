@@ -71,6 +71,34 @@ export interface TopItem {
     revenue: number;
 }
 
+export interface InvoiceItem {
+    id: string;
+    invoiceId: string;
+    itemName: string;
+    quantity: number;
+    unit: string;
+    pricePerUnit: number;
+    totalPrice: number;
+}
+
+export interface Invoice {
+    id: string;
+    invoiceNumber: string;
+    businessId: string;
+    business?: Business | null;
+    customerName: string;
+    customerPhone?: string | null;
+    customerAddress?: string | null;
+    items: InvoiceItem[];
+    subtotal: number;
+    gstRate: number;
+    gstAmount: number;
+    totalAmount: number;
+    notes?: string | null;
+    invoiceDate: string;
+    createdAt: string;
+}
+
 export type RootStackParamList = {
     Splash: undefined;
     Onboarding: undefined;
@@ -92,11 +120,21 @@ export type RootStackParamList = {
     AddPurchase: undefined;
     PurchaseSummary: undefined;
     UnitConversions: undefined;
+    WholesaleList: undefined;
 };
 
 export type MainTabParamList = {
     Home: undefined;
     Customers: undefined;
+    Purchases: undefined;
+    Invoices: undefined;
     Reports: undefined;
     Settings: undefined;
 };
+
+export type InvoiceStackParamList = {
+    InvoiceList: undefined;
+    CreateInvoice: undefined;
+    InvoiceDetail: { invoiceId: string };
+};
+

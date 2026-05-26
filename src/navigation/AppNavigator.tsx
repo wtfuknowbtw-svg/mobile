@@ -5,7 +5,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { View, Text, Platform } from 'react-native';
 import { COLORS } from '../constants';
 import { Ionicons } from '@expo/vector-icons';
-import type { RootStackParamList, MainTabParamList } from '../types';
+import type { RootStackParamList, MainTabParamList, InvoiceStackParamList } from '../types';
 import i18n from '../i18n';
 
 // Screens
@@ -32,6 +32,11 @@ import PurchasesScreen from '../screens/PurchasesScreen';
 import AddPurchaseScreen from '../screens/AddPurchaseScreen';
 import PurchaseSummaryScreen from '../screens/PurchaseSummaryScreen';
 import UnitConversionsScreen from '../screens/UnitConversionsScreen';
+import WholesaleListScreen from '../screens/WholesaleListScreen';
+import InvoiceListScreen from '../screens/InvoiceListScreen';
+import CreateInvoiceScreen from '../screens/CreateInvoiceScreen';
+import InvoiceDetailScreen from '../screens/InvoiceDetailScreen';
+
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const MainTab = createBottomTabNavigator<MainTabParamList>();
@@ -43,6 +48,10 @@ function getTabLabel(routeName: string) {
             return i18n.t('tabs.home');
         case 'Customers':
             return i18n.t('tabs.customers');
+        case 'Purchases':
+            return i18n.t('tabs.purchases') || 'Purchases';
+        case 'Invoices':
+            return i18n.t('tabs.invoices') || 'Invoices';
         case 'Reports':
             return i18n.t('tabs.reports');
         case 'Settings':
@@ -62,6 +71,12 @@ function TabIcon({ name, focused }: { name: string; focused: boolean }) {
             break;
         case 'Customers':
             iconName = focused ? 'people' : 'people-outline';
+            break;
+        case 'Purchases':
+            iconName = focused ? 'cart' : 'cart-outline';
+            break;
+        case 'Invoices':
+            iconName = focused ? 'receipt' : 'receipt-outline';
             break;
         case 'Reports':
             iconName = focused ? 'bar-chart' : 'bar-chart-outline';
@@ -92,6 +107,18 @@ function TabIcon({ name, focused }: { name: string; focused: boolean }) {
                 />
             )}
         </View>
+    );
+}
+
+const InvoiceStack = createNativeStackNavigator<InvoiceStackParamList>();
+
+function InvoicesStackScreen() {
+    return (
+        <InvoiceStack.Navigator screenOptions={{ headerShown: false }}>
+            <InvoiceStack.Screen name="InvoiceList" component={InvoiceListScreen} />
+            <InvoiceStack.Screen name="CreateInvoice" component={CreateInvoiceScreen} />
+            <InvoiceStack.Screen name="InvoiceDetail" component={InvoiceDetailScreen} />
+        </InvoiceStack.Navigator>
     );
 }
 
@@ -133,6 +160,8 @@ function MainTabs() {
         >
             <MainTab.Screen name="Home" component={HomeScreen} />
             <MainTab.Screen name="Customers" component={CustomersScreen} />
+            <MainTab.Screen name="Purchases" component={WholesaleListScreen} />
+            <MainTab.Screen name="Invoices" component={InvoicesStackScreen} />
             <MainTab.Screen name="Reports" component={ReportsScreen} />
             <MainTab.Screen name="Settings" component={SettingsScreen} />
         </MainTab.Navigator>
@@ -216,6 +245,11 @@ export default function AppNavigator() {
                 <Stack.Screen
                     name="UnitConversions"
                     component={UnitConversionsScreen}
+                    options={{ animation: 'slide_from_right' }}
+                />
+                <Stack.Screen
+                    name="WholesaleList"
+                    component={WholesaleListScreen}
                     options={{ animation: 'slide_from_right' }}
                 />
             </Stack.Navigator>

@@ -143,6 +143,8 @@
   "tabs": {
     "home": "Home",
     "customers": "Customers",
+    "purchases": "Purchases",
+    "invoices": "Invoices",
     "reports": "Reports",
     "settings": "Settings"
   },
@@ -197,5 +199,23 @@
   "manualEntry": {
     "correctData": "Correct Data",
     "phoneNumber": "Phone Number"
+  },
+  "invoice": {
+    "title": "Invoices",
+    "create": "Create Invoice",
+    "detail": "Invoice Details",
+    "list": "Invoice List",
+    "number": "Invoice Number",
+    "date": "Date",
+    "dueDate": "Due Date",
+    "customer": "Customer",
+    "items": "Items",
+    "addItem": "Add Item",
+    "total": "Total",
+    "generatePdf": "Generate PDF",
+    "share": "Share Invoice",
+    "status": "Status",
+    "paid": "Paid",
+    "unpaid": "Unpaid"
   }
 }

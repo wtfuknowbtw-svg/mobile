@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -12,8 +12,8 @@ import {
   Alert,
 } from 'react-native';
 import { COLORS } from '../constants';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { createPurchase } from '../api/purchases';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { addWholesalePurchase, getWholesalePurchases } from '../api/wholesale';
 import { useAppStore } from '../store/useAppStore';
 import { Ionicons } from '@expo/vector-icons';
 import i18n from '../i18n';
@@ -22,34 +22,50 @@ export default function AddPurchaseScreen({ navigation }: any) {
   const { businessId, language } = useAppStore();
   const queryClient = useQueryClient();
 
-  const [supplierName, setSupplierName] = useState('');
   const [itemName, setItemName] = useState('');
   const [quantity, setQuantity] = useState('');
   const [unit, setUnit] = useState('kg');
-  const [costPrice, setCostPrice] = useState('');
-  const [totalCost, setTotalCost] = useState('');
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  const [notes, setNotes] = useState('');
+  const [totalPrice, setTotalPrice] = useState('');
+  const [supplierName, setSupplierName] = useState('');
+  const [purchaseDate, setPurchaseDate] = useState(new Date().toISOString().split('T')[0]);
 
-  const units = ['kg', 'g', 'litre', 'pieces', 'bags', 'boxes'];
+  const units = ['kg', 'g', 'litre', 'ml', 'bag', 'carton', 'piece', 'dozen', 'quintal'];
 
-  // Auto-calculate total cost when quantity or cost price changes
-  useEffect(() => {
-    const qty = parseFloat(quantity) || 0;
-    const price = parseFloat(costPrice) || 0;
-    const total = qty * price;
-    if (total > 0) {
-      setTotalCost(total.toString());
+  // Fetch recent purchases to build autocomplete suggestions
+  const currentMonth = new Date().getMonth() + 1;
+  const currentYear = new Date().getFullYear();
+  
+  const { data: pastPurchasesResponse } = useQuery({
+    queryKey: ['wholesalePurchases', currentMonth, currentYear],
+    queryFn: () => getWholesalePurchases(currentMonth, currentYear),
+    enabled: !!businessId,
+  });
+
+  const suggestions = useMemo(() => {
+    if (!pastPurchasesResponse?.data) return [];
+    const items = pastPurchasesResponse.data.map((p) => p.itemName);
+    // Get unique and trim
+    return Array.from(new Set(items)).map(name => name.trim());
+  }, [pastPurchasesResponse]);
+
+  const filteredSuggestions = useMemo(() => {
+    if (!itemName) {
+      // Show top 5 recent suggestions when empty
+      return suggestions.slice(0, 5);
     }
-  }, [quantity, costPrice]);
+    return suggestions.filter((s) =>
+      s.toLowerCase().includes(itemName.toLowerCase())
+    ).slice(0, 5);
+  }, [suggestions, itemName]);
 
   const mutation = useMutation({
-    mutationFn: createPurchase,
+    mutationFn: addWholesalePurchase,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['purchases'] });
+      // Invalidate both standard and month-filtered queries
+      queryClient.invalidateQueries({ queryKey: ['wholesalePurchases'] });
       navigation.goBack();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       Alert.alert(
         language === 'hi' ? 'त्रुटि' : 'Error',
         language === 'hi' ? 'खरीद जोड़ने में विफल' : 'Failed to add purchase'
@@ -66,39 +82,45 @@ export default function AddPurchaseScreen({ navigation }: any) {
       return;
     }
 
-    if (!quantity || !costPrice || !totalCost) {
+    if (!quantity || isNaN(parseFloat(quantity)) || parseFloat(quantity) <= 0) {
       Alert.alert(
         language === 'hi' ? 'त्रुटि' : 'Error',
-        language === 'hi' ? 'मात्रा और कीमत आवश्यक है' : 'Quantity and price are required'
+        language === 'hi' ? 'मान्य मात्रा आवश्यक है' : 'Valid quantity is required'
+      );
+      return;
+    }
+
+    if (!totalPrice || isNaN(parseFloat(totalPrice)) || parseFloat(totalPrice) <= 0) {
+      Alert.alert(
+        language === 'hi' ? 'त्रुटि' : 'Error',
+        language === 'hi' ? 'कुल कीमत आवश्यक है' : 'Total price is required'
       );
       return;
     }
 
     mutation.mutate({
-      supplierName: supplierName.trim() || undefined,
       itemName: itemName.trim(),
       quantity: parseFloat(quantity),
       unit: unit,
-      costPrice: parseFloat(costPrice),
-      totalCost: parseFloat(totalCost),
-      date: date,
-      notes: notes.trim() || undefined,
+      totalPrice: parseFloat(totalPrice),
+      supplierName: supplierName.trim() || undefined,
+      purchaseDate: purchaseDate,
     });
   };
 
   const text = {
-    title: language === 'hi' ? 'नई खरीद' : 'New Purchase',
-    supplierName: language === 'hi' ? 'सप्लायर नाम (वैकल्पिक)' : 'Supplier Name (optional)',
-    supplierPlaceholder: language === 'hi' ? 'जैसे: Sharma Wholesale' : 'e.g. Sharma Wholesale',
+    title: language === 'hi' ? 'थोक खरीद जोड़ें' : 'Add Wholesale Purchase',
     itemName: language === 'hi' ? 'आइटम नाम (आवश्यक)' : 'Item Name (required)',
     itemPlaceholder: language === 'hi' ? 'जैसे: Basmati Rice' : 'e.g. Basmati Rice',
-    quantity: language === 'hi' ? 'मात्रा' : 'Quantity',
-    costPrice: language === 'hi' ? 'प्रति यूनिट कीमत' : 'Cost per unit',
-    totalCost: language === 'hi' ? 'कुल लागत' : 'Total Cost',
-    date: language === 'hi' ? 'तारीख' : 'Date',
-    notes: language === 'hi' ? 'नोट्स (वैकल्पिक)' : 'Notes (optional)',
-    totalCostLabel: language === 'hi' ? 'कुल लागत: ₹' : 'Total Cost: ₹',
-    save: language === 'hi' ? 'सेव करें' : 'Save',
+    quantity: language === 'hi' ? 'मात्रा (Quantity)' : 'Quantity',
+    unit: language === 'hi' ? 'यूनिट (Unit)' : 'Unit',
+    totalPrice: language === 'hi' ? 'कुल कीमत (₹)' : 'Total Price (₹)',
+    pricePlaceholder: language === 'hi' ? 'भुगतान की गई राशि' : 'Total amount paid in ₹',
+    supplierName: language === 'hi' ? 'सप्लायर का नाम (वैकल्पिक)' : 'Supplier Name (optional)',
+    supplierPlaceholder: language === 'hi' ? 'जैसे: नागपुर होलसेल मार्केट' : 'e.g. Nagpur Wholesale Market',
+    date: language === 'hi' ? 'तारीख' : 'Purchase Date',
+    save: language === 'hi' ? 'सेव करें' : 'Save Purchase',
+    suggestionsLabel: language === 'hi' ? 'हाल के आइटम्स:' : 'Recent Items:',
   };
 
   return (
@@ -106,31 +128,17 @@ export default function AddPurchaseScreen({ navigation }: any) {
       style={{ flex: 1, backgroundColor: COLORS.background }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
+      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color={COLORS.text} />
+          <Ionicons name="close" size={24} color={COLORS.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{text.title}</Text>
         <View style={{ width: 24 }} />
       </View>
 
-      <ScrollView style={styles.scrollView}>
-        {/* Supplier Name */}
-        <View style={styles.inputGroup}>
-          <View style={styles.labelRow}>
-            <Ionicons name="storefront-outline" size={16} color={COLORS.primary} style={styles.labelIcon} />
-            <Text style={styles.label}>{text.supplierName}</Text>
-          </View>
-          <TextInput
-            style={styles.input}
-            placeholder={text.supplierPlaceholder}
-            placeholderTextColor={COLORS.textMuted}
-            value={supplierName}
-            onChangeText={setSupplierName}
-          />
-        </View>
-
-        {/* Item Name */}
+      <ScrollView style={styles.scrollView} keyboardShouldPersistTaps="handled">
+        {/* Item Name Input */}
         <View style={styles.inputGroup}>
           <View style={styles.labelRow}>
             <Ionicons name="cube-outline" size={16} color={COLORS.primary} style={styles.labelIcon} />
@@ -145,32 +153,46 @@ export default function AddPurchaseScreen({ navigation }: any) {
           />
         </View>
 
-        {/* Quantity + Unit */}
+        {/* Autocomplete Suggestions */}
+        {filteredSuggestions.length > 0 && (
+          <View style={styles.suggestionsContainer}>
+            <Text style={styles.suggestionsTitle}>{text.suggestionsLabel}</Text>
+            <View style={styles.chipsContainer}>
+              {filteredSuggestions.map((suggestion) => (
+                <TouchableOpacity
+                  key={suggestion}
+                  style={styles.chip}
+                  onPress={() => setItemName(suggestion)}
+                >
+                  <Text style={styles.chipText}>{suggestion}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* Quantity */}
         <View style={styles.inputGroup}>
           <View style={styles.labelRow}>
             <Ionicons name="scale-outline" size={16} color={COLORS.primary} style={styles.labelIcon} />
             <Text style={styles.label}>{text.quantity}</Text>
           </View>
-          <View style={styles.quantityInputRow}>
-            <TextInput
-              style={[styles.input, styles.quantityInput, { flex: 1 }]}
-              placeholder="0"
-              placeholderTextColor={COLORS.textMuted}
-              value={quantity}
-              onChangeText={setQuantity}
-              keyboardType="decimal-pad"
-            />
-            {unit ? (
-              <View style={styles.unitSuffixContainer}>
-                <Text style={styles.unitSuffixText}>{unit}</Text>
-              </View>
-            ) : null}
-          </View>
-          
-          <Text style={styles.quantityPreviewText}>
-            {quantity || '0'} {unit}
-          </Text>
+          <TextInput
+            style={styles.input}
+            placeholder="0.00"
+            placeholderTextColor={COLORS.textMuted}
+            value={quantity}
+            onChangeText={setQuantity}
+            keyboardType="decimal-pad"
+          />
+        </View>
 
+        {/* Unit Dropdown/Selector */}
+        <View style={styles.inputGroup}>
+          <View style={styles.labelRow}>
+            <Ionicons name="options-outline" size={16} color={COLORS.primary} style={styles.labelIcon} />
+            <Text style={styles.label}>{text.unit}</Text>
+          </View>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -191,39 +213,38 @@ export default function AddPurchaseScreen({ navigation }: any) {
           </ScrollView>
         </View>
 
-        {/* Cost Price */}
+        {/* Total Price */}
         <View style={styles.inputGroup}>
           <View style={styles.labelRow}>
             <Ionicons name="cash-outline" size={16} color={COLORS.primary} style={styles.labelIcon} />
-            <Text style={styles.label}>{text.costPrice}</Text>
+            <Text style={styles.label}>{text.totalPrice}</Text>
           </View>
           <TextInput
             style={styles.input}
-            placeholder="0.00"
+            placeholder={text.pricePlaceholder}
             placeholderTextColor={COLORS.textMuted}
-            value={costPrice}
-            onChangeText={setCostPrice}
+            value={totalPrice}
+            onChangeText={setTotalPrice}
             keyboardType="decimal-pad"
           />
         </View>
 
-        {/* Total Cost */}
+        {/* Supplier Name */}
         <View style={styles.inputGroup}>
           <View style={styles.labelRow}>
-            <Ionicons name="wallet-outline" size={16} color={COLORS.primary} style={styles.labelIcon} />
-            <Text style={styles.label}>{text.totalCost}</Text>
+            <Ionicons name="storefront-outline" size={16} color={COLORS.primary} style={styles.labelIcon} />
+            <Text style={styles.label}>{text.supplierName}</Text>
           </View>
           <TextInput
             style={styles.input}
-            placeholder="0.00"
+            placeholder={text.supplierPlaceholder}
             placeholderTextColor={COLORS.textMuted}
-            value={totalCost}
-            onChangeText={setTotalCost}
-            keyboardType="decimal-pad"
+            value={supplierName}
+            onChangeText={setSupplierName}
           />
         </View>
 
-        {/* Date */}
+        {/* Date Picker */}
         <View style={styles.inputGroup}>
           <View style={styles.labelRow}>
             <Ionicons name="calendar-outline" size={16} color={COLORS.primary} style={styles.labelIcon} />
@@ -231,36 +252,14 @@ export default function AddPurchaseScreen({ navigation }: any) {
           </View>
           <TextInput
             style={styles.input}
-            value={date}
-            onChangeText={setDate}
+            value={purchaseDate}
+            onChangeText={setPurchaseDate}
             placeholder="YYYY-MM-DD"
             placeholderTextColor={COLORS.textMuted}
           />
         </View>
 
-        {/* Notes */}
-        <View style={styles.inputGroup}>
-          <View style={styles.labelRow}>
-            <Ionicons name="document-text-outline" size={16} color={COLORS.primary} style={styles.labelIcon} />
-            <Text style={styles.label}>{text.notes}</Text>
-          </View>
-          <TextInput
-            style={[styles.input, styles.textArea]}
-            placeholder={language === 'hi' ? 'वैकल्पिक नोट्स' : 'Optional notes'}
-            placeholderTextColor={COLORS.textMuted}
-            value={notes}
-            onChangeText={setNotes}
-            multiline
-            numberOfLines={3}
-          />
-        </View>
-
-        {/* Total Cost Display */}
-        <View style={styles.totalCostDisplay}>
-          <Text style={styles.totalCostLabel}>
-            {text.totalCostLabel}{totalCost || '0'}
-          </Text>
-        </View>
+        <View style={{ height: 40 }} />
       </ScrollView>
 
       {/* Save Button */}
@@ -287,7 +286,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 20,
+    paddingTop: Platform.OS === 'ios' ? 50 : 20,
     paddingBottom: 16,
     backgroundColor: COLORS.white,
     borderBottomWidth: 1,
@@ -328,33 +327,34 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
   },
-  quantityInputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    position: 'relative',
+  suggestionsContainer: {
+    marginTop: -10,
+    marginBottom: 18,
+    paddingHorizontal: 4,
   },
-  quantityInput: {
-    height: 56,
-    fontSize: 18,
-    paddingRight: 60,
-  },
-  unitSuffixContainer: {
-    position: 'absolute',
-    right: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  unitSuffixText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1A3C6E',
-  },
-  quantityPreviewText: {
-    fontSize: 14,
-    fontWeight: '600',
+  suggestionsTitle: {
+    fontSize: 12,
     color: COLORS.textMuted,
-    marginTop: 6,
-    marginBottom: 12,
+    fontWeight: '600',
+    marginBottom: 6,
+  },
+  chipsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  chip: {
+    backgroundColor: '#F1F3F5',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E9ECEF',
+  },
+  chipText: {
+    fontSize: 13,
+    color: COLORS.text,
+    fontWeight: '500',
   },
   unitPickerScroll: {
     marginTop: 4,
@@ -365,13 +365,13 @@ const styles = StyleSheet.create({
   },
   unitChip: {
     borderRadius: 20,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     justifyContent: 'center',
     alignItems: 'center',
   },
   unitChipSelected: {
-    backgroundColor: '#1A3C6E',
+    backgroundColor: COLORS.primary,
   },
   unitChipUnselected: {
     backgroundColor: '#FFFFFF',
@@ -383,27 +383,11 @@ const styles = StyleSheet.create({
   },
   unitChipTextSelected: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 14,
   },
   unitChipTextUnselected: {
     color: '#6B7280',
-    fontSize: 14,
-  },
-  textArea: {
-    height: 80,
-    textAlignVertical: 'top',
-  },
-  totalCostDisplay: {
-    backgroundColor: COLORS.primaryLight,
-    borderRadius: 12,
-    padding: 20,
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  totalCostLabel: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: COLORS.primary,
+    fontSize: 13,
   },
   footer: {
     backgroundColor: COLORS.white,
@@ -418,11 +402,6 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
   },
   saveButtonDisabled: {
     opacity: 0.6,

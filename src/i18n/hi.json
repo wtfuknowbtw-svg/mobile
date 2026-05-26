@@ -143,6 +143,8 @@
     "tabs": {
         "home": "होम",
         "customers": "ग्राहक",
+        "purchases": "खरीद",
+        "invoices": "इनवॉइस",
         "reports": "रिपोर्ट",
         "settings": "सेटिंग्स"
     },
@@ -197,5 +199,23 @@
     "manualEntry": {
         "correctData": "डेटा सुधारें",
         "phoneNumber": "फोन नंबर"
+    },
+    "invoice": {
+        "title": "इनवॉइस",
+        "create": "इनवॉइस बनाएं",
+        "detail": "इनवॉइस विवरण",
+        "list": "इनवॉइस सूची",
+        "number": "इनवॉइस संख्या",
+        "date": "दिनांक",
+        "dueDate": "नियत तारीख",
+        "customer": "ग्राहक",
+        "items": "सामान",
+        "addItem": "सामान जोड़ें",
+        "total": "कुल योग",
+        "generatePdf": "PDF बनाएं",
+        "share": "इनवॉइस शेयर करें",
+        "status": "स्थिति",
+        "paid": "भुगतान किया गया",
+        "unpaid": "बकाया"
     }
 }
